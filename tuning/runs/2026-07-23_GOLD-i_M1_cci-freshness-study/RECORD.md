@@ -1,4 +1,4 @@
-# CCI Freshness Study — Planned Run
+# CCI Freshness Study
 
 ## Objective
 
@@ -55,4 +55,76 @@ leverage 1:500, dan real ticks yang sama. Simpan preset sebagai `backtest-12.set
 
 ## Results
 
-Pending Strategy Tester folder 12.
+### Overall comparison
+
+| Metric | Folder 5 control | Folder 12 freshness | Delta |
+| --- | ---: | ---: | ---: |
+| Net profit | $3,472.01 | $3,471.94 | -$0.07 |
+| Profit factor | 1.53 | 1.53 | 0.00 |
+| Expected payoff | $2.50 | $2.50 | $0.00 |
+| MT5 trades | 1,391 | 1,390 | -1 |
+| Sharpe ratio | 3.80 | 3.80 | 0.00 |
+| Maximum equity DD | $1,608.22 | $1,608.22 | $0.00 |
+| Relative equity DD | 31.85% | 31.85% | 0.00 pp |
+
+### Original and recovery comparison
+
+| Metric | Folder 5 control | Folder 12 freshness |
+| --- | ---: | ---: |
+| Original cycles | 594 | 594 |
+| Original winners | 238 | 238 |
+| Original losers | 352 | 351 |
+| Original breakeven | 4 | 5 |
+| Original win rate | 40.07% | 40.07% |
+| Recovery cycles | 352 | 351 |
+| Recovery entry rate | 59.26% | 59.09% |
+| Recovery <= level 2 | 68.47% | 68.38% |
+| Recovery <= level 3 | 84.94% | 84.90% |
+| Recovery level 4+ | 15.06% | 15.10% |
+| Maximum recovery depth | 10 | 10 |
+
+Recovery depth folder 12 adalah L1=144, L2=96, L3=58, L4=25, L5=10, L6=8, L7=3,
+L8=1, L9=1, dan L10=5. Seluruh lima L10 control tetap muncul pada timestamp yang sama.
+
+### Daily consistency
+
+| Metric | Folder 5 control | Folder 12 freshness |
+| --- | ---: | ---: |
+| Active weekdays | 84/85 | 84/85 |
+| Positive realized-P/L days | 84 | 84 |
+| No-trade weekdays | 1 | 1 |
+| Average active-day P/L | $41.33 | $41.33 |
+| Median active-day P/L | $36.83 | $36.83 |
+| Recovery carried overnight | 5 | 5 |
+
+### Exact behavior change
+
+Kedua run memiliki 594 original cycle. Satu-satunya perubahan entry adalah:
+
+- control membuka BUY 2026-03-11 16:26, loss -$0.06, lalu recovery L1 menutup cycle sekitar +$0.07;
+- freshness menolak entry tersebut dan membuka BUY 16:27, lalu posisi selesai breakeven tanpa recovery.
+
+Tidak ada deep recovery yang ditolak. Perbedaan net profit total hanya -$0.07.
+
+## Verdict
+
+- Reject sebagai improvement: seluruh acceptance criteria kualitas gagal.
+- Current alignment hampir redundan karena setelah sebuah crossover BUY, CCI secara definisi tetap
+  di atas CI sampai cross berlawanan; hal yang sama berlaku untuk SELL.
+- Jangan menjadikan freshness ON sebagai baseline.
+- Folder 5 tetap control sementara.
+
+## Next hypothesis
+
+Jika CCI diberi satu eksperimen terakhir, gunakan momentum expansion yang benar-benar membedakan
+signal menguat dan melemah:
+
+```text
+CCI_DELTA = CCI - CI
+BUY  : DELTA bar 1 > 0 dan DELTA bar 1 > DELTA bar 2
+SELL : DELTA bar 1 < 0 dan DELTA bar 1 < DELTA bar 2
+```
+
+Berbeda dari alignment biasa, rule ini mensyaratkan jarak CCI terhadap CI sedang melebar ke arah
+entry. Jika tetap tidak meningkatkan original win rate/recovery tanpa merusak daily coverage,
+hentikan tuning CCI dan pindah ke impulse/risk guard.
