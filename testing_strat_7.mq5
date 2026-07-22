@@ -227,7 +227,8 @@ int OnInit()
    RecordStartOfDayEquity();
 
    Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber,
-         " CCISignalMode=", EnumToString(InpCciSignalMode));
+         " CCISignalMode=", EnumToString(InpCciSignalMode),
+         " CCIMomentumExpansion=", (InpCciRequireMomentumExpansion ? "ON" : "OFF"));
 
 //--- Account Status dashboard (attach indikator ke chart utama)
    AttachAccountStatusDashboard(g_handles);
