@@ -25,6 +25,12 @@ input group "CCI Settings"
 input int    InpCciLength              = 11;         // CCI length
 input int    InpCiLength               = 5;          // CI smoothing length
 
+input group "Original Entry Impulse Guard"
+input bool   InpEnableImpulseGuard     = false;      // Block original entry after adverse price impulse
+input int    InpImpulseLookbackBars    = 5;          // Closed-bar lookback for adverse movement
+input int    InpImpulseAtrPeriod       = 14;         // ATR period for impulse normalization
+input double InpMaxAdverseImpulseAtr   = 2.0;        // Block when adverse movement exceeds ATR multiple
+
 input group "SuperTrend Settings"
 input bool   InpUseMainSuperTrendFilter = true;      // Main strategy: use SuperTrend confirmation
 input int    InpSuperTrendAtrPeriod    = 50;         // SuperTrend ATR period

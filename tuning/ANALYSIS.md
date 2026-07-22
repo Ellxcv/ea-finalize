@@ -240,7 +240,7 @@ Untuk setiap run, jawab:
 | 2 | Directional trend strength dapat menolak falling knife | CCI3 + ADX_WITH_BIAS, M1/M5 | Original WR naik, recovery turun, active days >=80% | Tested; weak |
 | 3 | ADX smoothing 14 bar terlalu lambat | M5/25 dengan smoothing OFF | WR/recovery membaik tanpa DD/coverage rusak | Rejected; stop-out |
 | 4 | Strong dan normal CCI memiliki risiko berbeda | Test BOTH, NORMAL_ONLY, STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–12 next |
-| 5 | Impulse candle memicu deep recovery | Tambahkan ATR/candle-shock + spread guard | L4+ dan intraday DD turun | Proposed code |
+| 5 | Impulse candle memicu deep recovery | Tambahkan adverse-move guard berbasis ATR | L4+ dan intraday DD turun | Implemented; folder 14 next |
 | 6 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 
 ## Decision log

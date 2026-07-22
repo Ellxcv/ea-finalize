@@ -113,6 +113,7 @@ int GetClassicRecoveryTrendDirection();
 #include "Include/TS7/Signals/SuperTrend.mqh"
 #include "Include/TS7/Filters/TimeFilter.mqh"
 #include "Include/TS7/Filters/SessionFilter.mqh"
+#include "Include/TS7/Filters/ImpulseFilter.mqh"
 #include "Include/TS7/Core/DailyManager.mqh"
 #include "Include/TS7/Core/PositionManager.mqh"
 #include "Include/TS7/Core/RiskManager.mqh"
@@ -205,6 +206,10 @@ int OnInit()
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateRecoveryDistanceSignalInputs())
       return(INIT_PARAMETERS_INCORRECT);
+   if(!ValidateImpulseGuardInputs())
+      return(INIT_PARAMETERS_INCORRECT);
+
+   ResetImpulseGuardTelemetry();
 
 //--- Init symbol info
    if(!g_symbolInfo.Name(_Symbol))
@@ -227,7 +232,12 @@ int OnInit()
    RecordStartOfDayEquity();
 
    Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber,
-         " CCISignalMode=", EnumToString(InpCciSignalMode));
+         " CCISignalMode=", EnumToString(InpCciSignalMode),
+         " ImpulseGuard=", (InpEnableImpulseGuard ? "ON" : "OFF"));
+   if(InpEnableImpulseGuard)
+      Print("INFO: Impulse guard configured. Lookback=", InpImpulseLookbackBars,
+            " ATRPeriod=", InpImpulseAtrPeriod,
+            " MaxAdverseATR=", DoubleToString(InpMaxAdverseImpulseAtr, 2));
 
 //--- Account Status dashboard (attach indikator ke chart utama)
    AttachAccountStatusDashboard(g_handles);
@@ -240,6 +250,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
+   PrintImpulseGuardTelemetry();
    DetachAccountStatusDashboard();
    ReleaseAllHandles(g_handles);
    DeleteRecoveryLines();
@@ -438,7 +449,16 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_BUY) < InpMaxBuyPositions)
               {
-               if(ExecuteBuy(cciBuySignal))
+               bool consumeBuySignal = false;
+               if(!IsOriginalEntryAllowedByImpulse(1, buySignalTime, consumeBuySignal))
+                 {
+                  if(consumeBuySignal)
+                    {
+                     g_lastBuySignalUsed = buySignalTime;
+                     g_mainAllowBuySignalReuse = false;
+                    }
+                 }
+               else if(ExecuteBuy(cciBuySignal))
                  {
                   g_lastBuySignalUsed = buySignalTime;
                   g_mainAllowBuySignalReuse = false;
@@ -488,7 +508,16 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_SELL) < InpMaxSellPositions)
               {
-               if(ExecuteSell(cciSellSignal))
+               bool consumeSellSignal = false;
+               if(!IsOriginalEntryAllowedByImpulse(-1, sellSignalTime, consumeSellSignal))
+                 {
+                  if(consumeSellSignal)
+                    {
+                     g_lastSellSignalUsed = sellSignalTime;
+                     g_mainAllowSellSignalReuse = false;
+                    }
+                 }
+               else if(ExecuteSell(cciSellSignal))
                  {
                   g_lastSellSignalUsed = sellSignalTime;
                   g_mainAllowSellSignalReuse = false;
