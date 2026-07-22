@@ -239,7 +239,7 @@ Untuk setiap run, jawab:
 | 1 | CCI validity 3 memberi kompromi aktivitas/kualitas terbaik | Jadikan folder 5 control berikutnya | Daily coverage tetap 80%+ | Selected |
 | 2 | Directional trend strength dapat menolak falling knife | CCI3 + ADX_WITH_BIAS, M1/M5 | Original WR naik, recovery turun, active days >=80% | Tested; weak |
 | 3 | ADX smoothing 14 bar terlalu lambat | M5/25 dengan smoothing OFF | WR/recovery membaik tanpa DD/coverage rusak | Rejected; stop-out |
-| 4 | Strong dan normal CCI memiliki risiko berbeda | Test BOTH, NORMAL_ONLY, STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–12 next |
+| 4 | Strong dan normal CCI memiliki risiko berbeda | Folder 5 control; test NORMAL_ONLY dan STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–11 next |
 | 5 | Impulse candle memicu deep recovery | Tambahkan ATR/candle-shock + spread guard | L4+ dan intraday DD turun | Proposed code |
 | 6 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 
@@ -251,7 +251,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | CCI validity study 2–5 | Use validity 3 as provisional control | Validity 1 inactive; validity 2 stop-out; validity 5 excessive DD | Test ADX directional bias |
 | 2026-07-23 | ADX directional-bias study 5–8 | Do not accept ADX as WR solution | M1 worsened WR; M5 improvements were not material | Test M5/25 without smoothing once, then split CCI signal types |
 | 2026-07-23 | ADX smoothing-off folder 9 | Stop ADX parameter tuning | WR 36.00%, recovery 63.00%, and account nearly depleted on 2026-02-12 | Implement CCI signal-type separation, then impulse guard |
-| 2026-07-23 | CCI signal-type implementation | Prepare folders 10–12 | BOTH remains default; normal/strong receive separate telemetry | Backtest BOTH, NORMAL_ONLY, STRONG_ONLY |
+| 2026-07-23 | CCI signal-type implementation | Prepare folders 10–11 | Folder 5 is existing BOTH control | Backtest NORMAL_ONLY and STRONG_ONLY |
 
 ## Compound readiness gate
 

@@ -117,6 +117,6 @@ Hentikan tuning parameter ADX. Mode CCI berikut sudah diimplementasikan pada bra
 `feature/cci-signal-modes` untuk diuji secara terpisah:
 
 1. bedakan strong dan normal CCI serta tulis tipe sinyal ke comment/log;
-2. test BOTH sebagai control, NORMAL_ONLY, lalu STRONG_ONLY;
+2. gunakan folder 5 sebagai control BOTH, lalu test NORMAL_ONLY dan STRONG_ONLY;
 3. setelah tipe CCI terukur, tambahkan impulse guard berbasis candle-range/ATR dan maximum spread;
 4. gunakan folder 5 sebagai control entry dan folder 8 hanya sebagai pembanding exposure.

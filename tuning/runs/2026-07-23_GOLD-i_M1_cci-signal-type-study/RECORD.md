@@ -27,12 +27,13 @@ default lokal berbeda dari preset penelitian.
 
 | External folder | `InpCciSignalMode` | Purpose |
 | ---: | --- | --- |
-| 10 | `CCI_SIGNAL_MODE_BOTH` | Backward-compatibility control dan telemetry kedua tipe |
-| 11 | `CCI_SIGNAL_MODE_NORMAL_ONLY` | Mengisolasi normal Buy/Sell |
-| 12 | `CCI_SIGNAL_MODE_STRONG_ONLY` | Mengisolasi StrongBuy/StrongSell |
+| 5, existing | `CCI_SIGNAL_MODE_BOTH` equivalent | Historical control sebelum tag telemetry |
+| 10 | `CCI_SIGNAL_MODE_NORMAL_ONLY` | Mengisolasi normal Buy/Sell |
+| 11 | `CCI_SIGNAL_MODE_STRONG_ONLY` | Mengisolasi StrongBuy/StrongSell |
 
-Ubah hanya `InpCciSignalMode`. Simpan preset masing-masing sebagai `backtest-10.set`,
-`backtest-11.set`, dan `backtest-12.set`.
+Untuk folder 10 dan 11, load preset folder 5 lalu ubah hanya `InpCciSignalMode`. Simpan preset
+masing-masing sebagai `backtest-10.set` dan `backtest-11.set`. Repeat BOTH dilewati untuk menghemat
+waktu karena mode default mempertahankan seleksi sinyal folder 5.
 
 ## Telemetry contract
 
@@ -43,7 +44,7 @@ Ubah hanya `InpCciSignalMode`. Simpan preset masing-masing sebagai `backtest-10.
 
 ## Acceptance criteria
 
-Kandidat harus dibandingkan dengan folder 10, bukan hanya berdasarkan net profit:
+Kandidat harus dibandingkan dengan folder 5, bukan hanya berdasarkan net profit:
 
 | Metric | Initial target |
 | --- | ---: |
@@ -54,10 +55,11 @@ Kandidat harus dibandingkan dengan folder 10, bukan hanya berdasarkan net profit
 | Stop-out / forced liquidation | 0 |
 | Relative equity DD | Lebih rendah dari control |
 
-Jika tidak ada single mode yang memenuhi target, gunakan breakdown folder 10 untuk menentukan
-apakah masalah berasal dari tipe CCI atau dari freshness/context setelah sinyal muncul.
+Jika tidak ada single mode yang memenuhi target, bandingkan folder 10 dan 11 untuk menentukan tipe
+yang lebih berisiko. Run BOTH dengan telemetry baru hanya diperlukan kemudian jika interaksi kedua
+tipe dalam satu run perlu direkonstruksi.
 
 ## Results
 
-Pending Strategy Tester folders 10–12. MetaEditor build 5833 compiled the implementation with
+Pending Strategy Tester folders 10–11. MetaEditor build 5833 compiled the implementation with
 0 errors and 0 warnings before the batch.
