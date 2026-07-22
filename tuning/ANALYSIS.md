@@ -77,6 +77,8 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | ADX-study folder 7 | CCI3 + ADX bias M5/20 | 40.69% | 58.45% | 84.80% | 1.55 | 34.10% | $1,980.02 | Weak improvement |
 | ADX-study folder 8 | CCI3 + ADX bias M5/25 | 39.93% | 59.33% | 84.28% | 1.61 | 25.24% | $1,554.60 | Risk-filter candidate |
 | ADX-study folder 9 | M5/25, smoothing OFF | 36.00% | 63.00% | 82.54% | 0.31 | 95.72% | -$3,803.64 | Reject; stop-out |
+| CCI-type folder 10 | Normal only | 39.55% | 59.93% | 84.01% | 1.50 | 31.94% | $3,382.09 | Reject; no improvement |
+| CCI-type folder 11 | Strong only | 43.33% | 53.33% | 93.75% | 1.94 | 5.50% | $180.72 | Reject for inactivity |
 
 ## Daily consistency requirement
 
@@ -163,6 +165,23 @@ falling-knife BUY tanggal 2026-02-12 17:44. Recovery mencapai L10 dalam sekitar 
 kehilangan sekitar $4,387.23. Balance tersisa $196.36 sehingga report tidak menyelesaikan periode
 secara normal. ADX tuning dihentikan; smoothing tidak boleh dinonaktifkan pada kandidat ini.
 
+### 6. Normal CCI dominates activity and tail risk
+
+Folder 10 normal-only mempertahankan 574 dari 594 cycle control, active pada 84/85 weekday, dan
+mengulang seluruh lima cycle L10 pada timestamp yang sama. Original win rate justru turun menjadi
+39.55%, recovery rate naik menjadi 59.93%, dan relative equity DD tetap 31.94%. Strong CCI bukan
+penyebab utama rendahnya win rate atau deep recovery.
+
+Folder 11 strong-only menghasilkan original win rate 43.33%, recovery rate 53.33%, L4+ 6.25%, dan
+relative equity DD 5.50%. Namun hanya ada 30 original cycle dan 22/85 active weekdays, dengan
+no-trade streak 16 weekdays. Strong-only lebih selektif tetapi gagal memenuhi kebutuhan daily
+activity. Strong SELL mencatat 60% win rate, tetapi hanya berasal dari 10 cycle dan belum cukup
+untuk aturan side-specific.
+
+Eksperimen berikutnya harus mempertahankan sumber peluang normal tetapi menolak sinyal yang sudah
+kehilangan konteks. Karena indicator menyediakan buffer CCI dan CI, older signal dapat diwajibkan
+tetap aligned pada closed bar terakhir: CCI > CI untuk BUY dan CCI < CI untuk SELL.
+
 ## Baseline findings
 
 ### Recovery distribution
@@ -239,9 +258,10 @@ Untuk setiap run, jawab:
 | 1 | CCI validity 3 memberi kompromi aktivitas/kualitas terbaik | Jadikan folder 5 control berikutnya | Daily coverage tetap 80%+ | Selected |
 | 2 | Directional trend strength dapat menolak falling knife | CCI3 + ADX_WITH_BIAS, M1/M5 | Original WR naik, recovery turun, active days >=80% | Tested; weak |
 | 3 | ADX smoothing 14 bar terlalu lambat | M5/25 dengan smoothing OFF | WR/recovery membaik tanpa DD/coverage rusak | Rejected; stop-out |
-| 4 | Strong dan normal CCI memiliki risiko berbeda | Folder 5 control; test NORMAL_ONLY dan STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–11 next |
-| 5 | Impulse candle memicu deep recovery | Tambahkan ATR/candle-shock + spread guard | L4+ dan intraday DD turun | Proposed code |
-| 6 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
+| 4 | Strong dan normal CCI memiliki risiko berbeda | Folder 5 control; test NORMAL_ONLY dan STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Tested; neither accepted |
+| 5 | Older normal CCI signal kehilangan konteks | Require current CCI/CI alignment | WR/recovery membaik dengan active days >=80% | Next code |
+| 6 | Impulse candle memicu deep recovery | Tambahkan ATR/candle-shock + spread guard | L4+ dan intraday DD turun | Proposed code |
+| 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 
 ## Decision log
 
@@ -252,6 +272,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | ADX directional-bias study 5–8 | Do not accept ADX as WR solution | M1 worsened WR; M5 improvements were not material | Test M5/25 without smoothing once, then split CCI signal types |
 | 2026-07-23 | ADX smoothing-off folder 9 | Stop ADX parameter tuning | WR 36.00%, recovery 63.00%, and account nearly depleted on 2026-02-12 | Implement CCI signal-type separation, then impulse guard |
 | 2026-07-23 | CCI signal-type implementation | Prepare folders 10–11 | Folder 5 is existing BOTH control | Backtest NORMAL_ONLY and STRONG_ONLY |
+| 2026-07-23 | CCI signal-type study 5/10/11 | Keep folder 5 as control | Normal reproduces tail risk; strong fails daily coverage | Implement CCI/CI freshness confirmation |
 
 ## Compound readiness gate
 
