@@ -191,6 +191,11 @@ bool ValidateRecoveryDistanceSignalInputs()
 //+------------------------------------------------------------------+
 int OnInit()
   {
+   if(InpCciSignalValidityBars <= 0)
+     {
+      Print("ERROR: InpCciSignalValidityBars must be > 0.");
+      return(INIT_PARAMETERS_INCORRECT);
+     }
    if(InpMainLotMode == MAIN_LOT_DYNAMIC && InpMainRiskPercent <= 0.0)
      {
       Print("ERROR: InpMainRiskPercent must be > 0 when InpMainLotMode=MAIN_LOT_DYNAMIC.");
@@ -221,7 +226,8 @@ int OnInit()
 //--- Record start of day equity
    RecordStartOfDayEquity();
 
-   Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber);
+   Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber,
+         " CCISignalMode=", EnumToString(InpCciSignalMode));
 
 //--- Account Status dashboard (attach indikator ke chart utama)
    AttachAccountStatusDashboard(g_handles);
@@ -352,10 +358,12 @@ void OnTick()
      }
 
 //--- Baca semua indikator
-   int    cciSignal     = 0;
-   datetime cciSignalTime = 0;
-   bool   cciBuy        = GetCCISignal(1, cciSignal, cciSignalTime);  // 1 = buy side
-   bool   cciSell       = GetCCISignal(-1, cciSignal, cciSignalTime); // -1 = sell side
+   int      cciBuySignal      = CCI_SIGNAL_NONE;
+   int      cciSellSignal     = CCI_SIGNAL_NONE;
+   datetime cciBuySignalTime  = 0;
+   datetime cciSellSignalTime = 0;
+   bool     cciBuy             = GetCCISignal(1, cciBuySignal, cciBuySignalTime);
+   bool     cciSell            = GetCCISignal(-1, cciSellSignal, cciSellSignalTime);
 
    int    hiloTrend     = GetHiLoTrend();
    int    psarState     = GetMainPSARState();
@@ -375,8 +383,9 @@ void OnTick()
    bool mainPsarPassSell = (!InpUseMainPsarFilter || psarState == -1);
    bool mainStPassSell   = (!InpUseMainSuperTrendFilter || stTrend == -1);
 
-   PrintDebug(StringFormat("Signals: CCI_Buy=%s CCI_Sell=%s HiLo=%d(%s) PSAR=%d(%s) ST=%d(%s)",
-              cciBuy?"Y":"N", cciSell?"Y":"N",
+   PrintDebug(StringFormat("Signals: CCI_Buy=%s(%s) CCI_Sell=%s(%s) HiLo=%d(%s) PSAR=%d(%s) ST=%d(%s)",
+              cciBuy?"Y":"N", CCISignalTypeToString(cciBuySignal),
+              cciSell?"Y":"N", CCISignalTypeToString(cciSellSignal),
               hiloTrend, (InpUseMainHiLoFilter ? "ON" : "OFF"),
               psarState, (InpUseMainPsarFilter ? "ON" : "OFF"),
               stTrend, (InpUseMainSuperTrendFilter ? "ON" : "OFF")));
@@ -404,9 +413,7 @@ void OnTick()
    if(InpEnableBuy && cciBuy)
      {
       // Cek re-entry: pastikan sinyal ini belum pernah dipakai
-      int    dummySignal = 0;
-      datetime buySignalTime = 0;
-      GetCCISignal(1, dummySignal, buySignalTime);
+      datetime buySignalTime = cciBuySignalTime;
 
       bool isNewBuySignal = (buySignalTime != g_lastBuySignalUsed);
       bool allowBuyReuse = (InpMainSignalReentryMode == MAIN_SIGNAL_REENTRY_PROFIT_SAME_SIGNAL
@@ -431,12 +438,13 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_BUY) < InpMaxBuyPositions)
               {
-               if(ExecuteBuy())
+               if(ExecuteBuy(cciBuySignal))
                  {
                   g_lastBuySignalUsed = buySignalTime;
                   g_mainAllowBuySignalReuse = false;
                   mainStrategyOpenCount = CountMainStrategyPositions();
-                  Print("INFO: BUY executed. SignalTime=", buySignalTime);
+                  Print("INFO: BUY executed. SignalTime=", buySignalTime,
+                        " CCIType=", CCISignalTypeToString(cciBuySignal));
                  }
               }
             else
@@ -455,9 +463,7 @@ void OnTick()
 //--- Evaluasi entry SELL
    if(InpEnableSell && cciSell)
      {
-      int    dummySignal2 = 0;
-      datetime sellSignalTime = 0;
-      GetCCISignal(-1, dummySignal2, sellSignalTime);
+      datetime sellSignalTime = cciSellSignalTime;
 
       bool isNewSellSignal = (sellSignalTime != g_lastSellSignalUsed);
       bool allowSellReuse = (InpMainSignalReentryMode == MAIN_SIGNAL_REENTRY_PROFIT_SAME_SIGNAL
@@ -482,12 +488,13 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_SELL) < InpMaxSellPositions)
               {
-               if(ExecuteSell())
+               if(ExecuteSell(cciSellSignal))
                  {
                   g_lastSellSignalUsed = sellSignalTime;
                   g_mainAllowSellSignalReuse = false;
                   mainStrategyOpenCount = CountMainStrategyPositions();
-                  Print("INFO: SELL executed. SignalTime=", sellSignalTime);
+                  Print("INFO: SELL executed. SignalTime=", sellSignalTime,
+                        " CCIType=", CCISignalTypeToString(cciSellSignal));
                  }
               }
             else

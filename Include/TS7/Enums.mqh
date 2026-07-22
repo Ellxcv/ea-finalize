@@ -87,6 +87,24 @@ enum ENUM_MAIN_POSITION_MODE
    MAIN_POSITION_MODE_SINGLE_ACTIVE = 1  // New: only one active original strategy position
   };
 
+//--- Enum CCI Signal Type
+enum ENUM_CCI_SIGNAL_TYPE
+  {
+   CCI_SIGNAL_STRONG_SELL = -2,
+   CCI_SIGNAL_SELL        = -1,
+   CCI_SIGNAL_NONE        = 0,
+   CCI_SIGNAL_BUY         = 1,
+   CCI_SIGNAL_STRONG_BUY  = 2
+  };
+
+//--- Enum CCI Signal Selection Mode
+enum ENUM_CCI_SIGNAL_MODE
+  {
+   CCI_SIGNAL_MODE_BOTH        = 0, // Accept normal and strong signals (legacy behavior)
+   CCI_SIGNAL_MODE_NORMAL_ONLY = 1, // Accept normal Buy/Sell signals only
+   CCI_SIGNAL_MODE_STRONG_ONLY = 2  // Accept StrongBuy/StrongSell signals only
+  };
+
 //--- Enum ADX Filter Mode
 enum ENUM_ADX_FILTER_MODE
   {

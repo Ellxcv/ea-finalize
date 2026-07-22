@@ -25,6 +25,15 @@ berada pada lokasi standar MQL5/Indicators karena iCustom mencarinya saat runtim
 - Inputs.mqh: konfigurasi pengguna yang tampil pada properti EA.
 - GlobalState.mqh: state dan handle bersama yang dibutuhkan lintas modul.
 
+## CCI signal selection
+
+`Signals/CCI.mqh` membaca empat buffer indikator: normal Buy/Sell dan StrongBuy/StrongSell.
+`InpCciSignalMode` menentukan apakah entry menerima keduanya, hanya normal, atau hanya strong. Mode
+default `CCI_SIGNAL_MODE_BOTH` mempertahankan perilaku legacy.
+
+Original order diberi tag `[CCI:N]` untuk normal atau `[CCI:S]` untuk strong. Tag tersebut hanya
+untuk telemetry dan tidak mengubah klasifikasi recovery; recovery tetap dikenali melalui `[REC]`.
+
 Perubahan sebaiknya bergerak dari input dan kontrak state menuju satu modul perilaku, lalu
 diverifikasi pada entry point. Jangan menduplikasi source modul kembali ke folder global
 MQL5/Include/TS7; repository adalah sumber utama untuk project ini.
