@@ -34,6 +34,10 @@ default `CCI_SIGNAL_MODE_BOTH` mempertahankan perilaku legacy.
 Original order diberi tag `[CCI:N]` untuk normal atau `[CCI:S]` untuk strong. Tag tersebut hanya
 untuk telemetry dan tidak mengubah klasifikasi recovery; recovery tetap dikenali melalui `[REC]`.
 
+`InpCciRequireCurrentAlignment` dapat memvalidasi freshness kandidat dari beberapa bar sebelumnya.
+Saat aktif, kandidat BUY hanya diterima bila closed bar terakhir masih memiliki CCI di atas CI;
+kandidat SELL membutuhkan CCI di bawah CI. Default `false` mempertahankan perilaku legacy.
+
 Perubahan sebaiknya bergerak dari input dan kontrak state menuju satu modul perilaku, lalu
 diverifikasi pada entry point. Jangan menduplikasi source modul kembali ke folder global
 MQL5/Include/TS7; repository adalah sumber utama untuk project ini.
