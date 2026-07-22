@@ -1,0 +1,7 @@
+.gitattributes text eol=lf
+.gitignore text eol=lf
+*.mq5 text eol=crlf
+*.mqh text eol=crlf
+*.mqproj text eol=lf
+*.md text eol=lf
+*.json text eol=lf

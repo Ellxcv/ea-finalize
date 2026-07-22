@@ -1,0 +1,29 @@
+# MetaEditor build outputs
+*.ex5
+*.ex4
+*.log
+*.tmp
+*.bak
+
+# Local backups and scratch files
+*_Backup.mq5
+*_backup.mq5
+.cl
+NewFile
+NewFile.mqh
+
+# Local research/reference material; review licensing before publishing
+/requirement/
+
+# Editor and operating-system state
+/.vscode/
+/.idea/
+*.user
+.DS_Store
+Thumbs.db
+
+# Tester/runtime artifacts
+/logs/
+/tester/
+/profiles/
+/cache/
