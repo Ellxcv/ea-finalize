@@ -48,6 +48,12 @@ demo, dan review parameter risiko. Software ini tidak menjamin profit.
 
 Lihat [docs/development.md](docs/development.md) untuk langkah lengkap.
 
+## Strategy tuning
+
+Hasil Strategy Tester dan analisis tuning disimpan di folder [tuning](tuning/README.md).
+Gunakan template yang tersedia agar setiap eksperimen dapat dibandingkan berdasarkan kualitas
+strategy original, frekuensi recovery, kedalaman recovery, drawdown, dan kesiapan compound.
+
 ## Status publikasi
 
 Source indikator eksternal pada folder lokal requirement/ sengaja tidak dimasukkan. Lisensi dan

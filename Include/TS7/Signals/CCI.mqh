@@ -5,6 +5,41 @@
 #define TS7_CCI_MQH
 
 //+------------------------------------------------------------------+
+bool IsCCISignalTypeAllowed(const int signalType)
+  {
+   int absoluteType = (int)MathAbs(signalType);
+   if(InpCciSignalMode == CCI_SIGNAL_MODE_NORMAL_ONLY)
+      return (absoluteType == 1);
+   if(InpCciSignalMode == CCI_SIGNAL_MODE_STRONG_ONLY)
+      return (absoluteType == 2);
+   return (absoluteType == 1 || absoluteType == 2);
+  }
+
+//+------------------------------------------------------------------+
+string CCISignalTypeToString(const int signalType)
+  {
+   switch(signalType)
+     {
+      case CCI_SIGNAL_STRONG_BUY:  return "STRONG_BUY";
+      case CCI_SIGNAL_BUY:         return "BUY";
+      case CCI_SIGNAL_SELL:        return "SELL";
+      case CCI_SIGNAL_STRONG_SELL: return "STRONG_SELL";
+      default:                     return "NONE";
+     }
+  }
+
+//+------------------------------------------------------------------+
+string BuildCCIMainOrderComment(const string baseComment, const int signalType)
+  {
+   int absoluteType = (int)MathAbs(signalType);
+   if(absoluteType == 2)
+      return baseComment + " [CCI:S]";
+   if(absoluteType == 1)
+      return baseComment + " [CCI:N]";
+   return baseComment;
+  }
+
+//+------------------------------------------------------------------+
 bool GetCCISignal(const int side, int &signalType, datetime &signalTime)
   {
    signalType = 0;
@@ -32,15 +67,15 @@ bool GetCCISignal(const int side, int &signalType, datetime &signalTime)
       int count = MathMin(copied1, copied2);
       for(int i = 0; i < count; i++)
         {
-         if(strongBuyBuf[i] != EMPTY_VALUE)
+         if(strongBuyBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_STRONG_BUY))
            {
-            signalType = 2;  // Strong Buy
+            signalType = CCI_SIGNAL_STRONG_BUY;
             signalTime = iTime(_Symbol, _Period, i + 1);
             return true;
            }
-         if(buyBuf[i] != EMPTY_VALUE)
+         if(buyBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_BUY))
            {
-            signalType = 1;  // Buy
+            signalType = CCI_SIGNAL_BUY;
             signalTime = iTime(_Symbol, _Period, i + 1);
             return true;
            }
@@ -64,15 +99,15 @@ bool GetCCISignal(const int side, int &signalType, datetime &signalTime)
       int count = MathMin(copied1, copied2);
       for(int i = 0; i < count; i++)
         {
-         if(strongSellBuf[i] != EMPTY_VALUE)
+         if(strongSellBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_STRONG_SELL))
            {
-            signalType = -2;  // Strong Sell
+            signalType = CCI_SIGNAL_STRONG_SELL;
             signalTime = iTime(_Symbol, _Period, i + 1);
             return true;
            }
-         if(sellBuf[i] != EMPTY_VALUE)
+         if(sellBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_SELL))
            {
-            signalType = -1;  // Sell
+            signalType = CCI_SIGNAL_SELL;
             signalTime = iTime(_Symbol, _Period, i + 1);
             return true;
            }
