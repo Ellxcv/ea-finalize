@@ -40,6 +40,65 @@ string BuildCCIMainOrderComment(const string baseComment, const int signalType)
   }
 
 //+------------------------------------------------------------------+
+bool ConfirmCurrentCCIAlignment(const int side,
+                                const int candidateSignalType,
+                                const datetime candidateSignalTime)
+  {
+   if(!InpCciRequireCurrentAlignment)
+      return true;
+
+   double currentCciBuf[];
+   double currentCiBuf[];
+   ArraySetAsSeries(currentCciBuf, true);
+   ArraySetAsSeries(currentCiBuf, true);
+
+   int copiedCci = CopyBuffer(g_handles.cci, 0, 1, 1, currentCciBuf);
+   int copiedCi  = CopyBuffer(g_handles.cci, 3, 1, 1, currentCiBuf);
+   if(copiedCci != 1 || copiedCi != 1)
+     {
+      Print("WARNING: Gagal copy current closed CCI/CI alignment. Err=", GetLastError());
+      return false;
+     }
+
+   double currentCci = currentCciBuf[0];
+   double currentCi  = currentCiBuf[0];
+   if(currentCci == EMPTY_VALUE || currentCi == EMPTY_VALUE ||
+      !MathIsValidNumber(currentCci) || !MathIsValidNumber(currentCi))
+     {
+      PrintDebug("CCI signal blocked: current closed CCI/CI value unavailable");
+      return false;
+     }
+
+   bool aligned = ((side > 0 && currentCci > currentCi) ||
+                   (side < 0 && currentCci < currentCi));
+   if(!aligned)
+     {
+      PrintDebug(StringFormat("CCI signal blocked by current alignment: Type=%s SignalTime=%s CCI=%.2f CI=%.2f",
+                 CCISignalTypeToString(candidateSignalType),
+                 TimeToString(candidateSignalTime, TIME_DATE|TIME_MINUTES),
+                 currentCci,
+                 currentCi));
+     }
+
+   return aligned;
+  }
+
+//+------------------------------------------------------------------+
+bool AcceptCCISignalCandidate(const int side,
+                              const int candidateSignalType,
+                              const datetime candidateSignalTime,
+                              int &signalType,
+                              datetime &signalTime)
+  {
+   if(!ConfirmCurrentCCIAlignment(side, candidateSignalType, candidateSignalTime))
+      return false;
+
+   signalType = candidateSignalType;
+   signalTime = candidateSignalTime;
+   return true;
+  }
+
+//+------------------------------------------------------------------+
 bool GetCCISignal(const int side, int &signalType, datetime &signalTime)
   {
    signalType = 0;
@@ -69,15 +128,21 @@ bool GetCCISignal(const int side, int &signalType, datetime &signalTime)
         {
          if(strongBuyBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_STRONG_BUY))
            {
-            signalType = CCI_SIGNAL_STRONG_BUY;
-            signalTime = iTime(_Symbol, _Period, i + 1);
-            return true;
+            datetime candidateTime = iTime(_Symbol, _Period, i + 1);
+            return AcceptCCISignalCandidate(side,
+                                            CCI_SIGNAL_STRONG_BUY,
+                                            candidateTime,
+                                            signalType,
+                                            signalTime);
            }
          if(buyBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_BUY))
            {
-            signalType = CCI_SIGNAL_BUY;
-            signalTime = iTime(_Symbol, _Period, i + 1);
-            return true;
+            datetime candidateTime = iTime(_Symbol, _Period, i + 1);
+            return AcceptCCISignalCandidate(side,
+                                            CCI_SIGNAL_BUY,
+                                            candidateTime,
+                                            signalType,
+                                            signalTime);
            }
         }
      }
@@ -101,15 +166,21 @@ bool GetCCISignal(const int side, int &signalType, datetime &signalTime)
         {
          if(strongSellBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_STRONG_SELL))
            {
-            signalType = CCI_SIGNAL_STRONG_SELL;
-            signalTime = iTime(_Symbol, _Period, i + 1);
-            return true;
+            datetime candidateTime = iTime(_Symbol, _Period, i + 1);
+            return AcceptCCISignalCandidate(side,
+                                            CCI_SIGNAL_STRONG_SELL,
+                                            candidateTime,
+                                            signalType,
+                                            signalTime);
            }
          if(sellBuf[i] != EMPTY_VALUE && IsCCISignalTypeAllowed(CCI_SIGNAL_SELL))
            {
-            signalType = CCI_SIGNAL_SELL;
-            signalTime = iTime(_Symbol, _Period, i + 1);
-            return true;
+            datetime candidateTime = iTime(_Symbol, _Period, i + 1);
+            return AcceptCCISignalCandidate(side,
+                                            CCI_SIGNAL_SELL,
+                                            candidateTime,
+                                            signalType,
+                                            signalTime);
            }
         }
      }

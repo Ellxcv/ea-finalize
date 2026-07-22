@@ -18,6 +18,7 @@ input int    InpMaxBuyPositions        = 1;          // Max active buy positions
 input int    InpMaxSellPositions       = 1;          // Max active sell positions
 input int    InpCciSignalValidityBars  = 6;          // Signal candle + 5 next candles
 input ENUM_CCI_SIGNAL_MODE InpCciSignalMode = CCI_SIGNAL_MODE_BOTH; // CCI signal type selection
+input bool   InpCciRequireCurrentAlignment = false;  // Require latest closed CCI/CI alignment
 input ENUM_MAIN_POSITION_MODE InpMainPositionMode = MAIN_POSITION_MODE_LEGACY; // Main strategy position mode
 input ENUM_MAIN_SIGNAL_REENTRY_MODE InpMainSignalReentryMode = MAIN_SIGNAL_REENTRY_LEGACY; // Main signal re-entry mode
 
