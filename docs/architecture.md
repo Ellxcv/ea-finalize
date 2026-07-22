@@ -34,6 +34,12 @@ default `CCI_SIGNAL_MODE_BOTH` mempertahankan perilaku legacy.
 Original order diberi tag `[CCI:N]` untuk normal atau `[CCI:S]` untuk strong. Tag tersebut hanya
 untuk telemetry dan tidak mengubah klasifikasi recovery; recovery tetap dikenali melalui `[REC]`.
 
+`InpEnableImpulseGuard` menambahkan veto khusus entry original menggunakan adverse movement dari
+closed bar terbaru terhadap close beberapa bar sebelumnya, dinormalisasi dengan ATR. BUY ditolak
+setelah penurunan ekstrem dan SELL ditolak setelah kenaikan ekstrem. Sinyal yang ditolak dianggap
+sudah digunakan agar tidak berubah menjadi entry tertunda; recovery tidak melewati filter ini.
+Default `false` mempertahankan perilaku legacy.
+
 Perubahan sebaiknya bergerak dari input dan kontrak state menuju satu modul perilaku, lalu
 diverifikasi pada entry point. Jangan menduplikasi source modul kembali ke folder global
 MQL5/Include/TS7; repository adalah sumber utama untuk project ini.

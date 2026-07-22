@@ -172,6 +172,17 @@ bool CreateAllHandles(SHandles &handles)
             ". Main signal will fallback to default PSAR handle.");
      }
 
+//--- Original-entry adverse impulse ATR handle
+   if(InpEnableImpulseGuard)
+     {
+      handles.impulseATR = iATR(_Symbol, _Period, InpImpulseAtrPeriod);
+      if(handles.impulseATR == INVALID_HANDLE)
+        {
+         Print("ERROR: Failed creating impulse guard ATR handle. Error=", GetLastError());
+         return false;
+        }
+     }
+
 //--- Recovery ATR handle (hanya buat jika mode ATR)
    if(InpEnableRecovery && InpRecoveryZoneMode == RECOVERY_ZONE_ATR)
      {
@@ -281,6 +292,7 @@ void ReleaseAllHandles(SHandles &handles)
    if(handles.recoveryDistanceST != INVALID_HANDLE)   { IndicatorRelease(handles.recoveryDistanceST);   handles.recoveryDistanceST = INVALID_HANDLE; }
    if(handles.recoveryATR != INVALID_HANDLE) { IndicatorRelease(handles.recoveryATR); handles.recoveryATR = INVALID_HANDLE; }
    if(handles.recoveryGridATR != INVALID_HANDLE) { IndicatorRelease(handles.recoveryGridATR); handles.recoveryGridATR = INVALID_HANDLE; }
+   if(handles.impulseATR != INVALID_HANDLE)    { IndicatorRelease(handles.impulseATR);    handles.impulseATR = INVALID_HANDLE; }
    if(handles.adx != INVALID_HANDLE)         { IndicatorRelease(handles.adx);         handles.adx = INVALID_HANDLE; }
    if(handles.stFilter != INVALID_HANDLE)    { IndicatorRelease(handles.stFilter);    handles.stFilter = INVALID_HANDLE; }
    if(handles.algoZone != INVALID_HANDLE)    { IndicatorRelease(handles.algoZone);    handles.algoZone = INVALID_HANDLE; }

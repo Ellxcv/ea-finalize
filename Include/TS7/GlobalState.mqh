@@ -19,6 +19,7 @@ struct SHandles
    int recoveryDistanceST;
    int recoveryATR;
    int recoveryGridATR;
+   int impulseATR;
    int adx;
    int stFilter;
    int accountStatus;
@@ -40,6 +41,7 @@ struct SHandles
       recoveryDistanceST = INVALID_HANDLE;
       recoveryATR = INVALID_HANDLE;
       recoveryGridATR = INVALID_HANDLE;
+      impulseATR = INVALID_HANDLE;
       adx = INVALID_HANDLE;
       stFilter = INVALID_HANDLE;
       accountStatus = INVALID_HANDLE;
@@ -50,5 +52,10 @@ struct SHandles
   };
 
 SHandles g_handles;
+
+long g_impulseGuardChecks = 0;
+long g_impulseGuardBlockedBuy = 0;
+long g_impulseGuardBlockedSell = 0;
+long g_impulseGuardDataErrors = 0;
 
 #endif // TS7_GLOBAL_STATE_MQH
