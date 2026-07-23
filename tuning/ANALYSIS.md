@@ -284,7 +284,7 @@ Untuk setiap run, jawab:
 | 5 | Impulse beberapa bar memicu deep recovery | Tambahkan directional impulse + distance-from-mean telemetry | Temukan separator loser L4+ tanpa merusak coverage | Rejected; no separator |
 | 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50, 100, dan 200 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Offset 50 provisional; 100/200 rejected |
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
-| 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Next |
+| 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Implemented; folder 22 next |
 
 ## Decision log
 
@@ -298,6 +298,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | Original diagnostics folder 17 | Accept telemetry; do not add ATR/range/spread entry guard | Trades match control; entry features do not separate outcomes; 48 tiny losses reached MFE 500+ | Test original trailing breakeven offsets 50 and 100 |
 | 2026-07-23 | Trailing BE folders 18–20 | Keep offset 50 as provisional candidate; reject 100/200 | Offset 50 raises original WR to 47.47% with similar net/DD; larger offsets stop out during February shock | Stop offset tuning; diagnose entry context of 53 L4+ cycles |
 | 2026-07-23 | Entry-context diagnostics folder 21 | Do not add impulse/EMA-distance entry guard | History reproduced exactly; no feature reaches the 20% L4+ / 10% winner screen and none survives the time split | Instrument trend freshness and slope next |
+| 2026-07-23 | Trend-freshness diagnostics implementation | Prepare folder 22 as observation-only | Log signed age for four trend filters and direction-normalized EMA slope without changing decisions | Reproduce folder 21, then screen L4+ separation |
 
 ## Compound readiness gate
 
