@@ -51,4 +51,12 @@ struct SHandles
 
 SHandles g_handles;
 
+long g_cciStaleBreakoutChecks = 0;
+long g_cciStaleBreakoutFreshAllowed = 0;
+long g_cciStaleBreakoutConfirmedBuy = 0;
+long g_cciStaleBreakoutConfirmedSell = 0;
+long g_cciStaleBreakoutWaitingBuy = 0;
+long g_cciStaleBreakoutWaitingSell = 0;
+long g_cciStaleBreakoutDataErrors = 0;
+
 #endif // TS7_GLOBAL_STATE_MQH

@@ -34,6 +34,12 @@ default `CCI_SIGNAL_MODE_BOTH` mempertahankan perilaku legacy.
 Original order diberi tag `[CCI:N]` untuk normal atau `[CCI:S]` untuk strong. Tag tersebut hanya
 untuk telemetry dan tidak mengubah klasifikasi recovery; recovery tetap dikenali melalui `[REC]`.
 
+`InpEnableCciStaleBreakoutConfirm` mempertahankan entry CCI fresh pada age 1. Untuk signal age 2–3,
+BUY memerlukan closed price terbaru di atas high candle asal signal dan SELL memerlukan closed price
+terbaru di bawah low candle asal signal. Signal yang belum confirmed tetap dapat diperiksa sampai
+validity habis. Filter ini hanya berlaku pada original entry; recovery tidak berubah dan default
+`false` mempertahankan perilaku legacy.
+
 Perubahan sebaiknya bergerak dari input dan kontrak state menuju satu modul perilaku, lalu
 diverifikasi pada entry point. Jangan menduplikasi source modul kembali ke folder global
 MQL5/Include/TS7; repository adalah sumber utama untuk project ini.
