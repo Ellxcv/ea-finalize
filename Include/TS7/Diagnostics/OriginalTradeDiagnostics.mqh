@@ -5,6 +5,8 @@
 #ifndef TS7_DIAGNOSTICS_ORIGINALTRADEDIAGNOSTICS_MQH
 #define TS7_DIAGNOSTICS_ORIGINALTRADEDIAGNOSTICS_MQH
 
+const int ORIGINAL_DIAG_TREND_AGE_LOOKBACK = 200;
+
 struct SOriginalTradeDiagnostic
   {
    bool               active;
@@ -26,6 +28,13 @@ struct SOriginalTradeDiagnostic
    double             distanceEmaAtr;
    double             signalDriftAtr;
    bool               contextReady;
+   int                hiloAgeBars;
+   int                psarAgeBars;
+   int                superTrendAgeBars;
+   int                stMtfAgeBars;
+   double             emaSlope5Atr;
+   double             emaSlope10Atr;
+   bool               trendContextReady;
    double             mfePoints;
    double             maePoints;
    double             maxProfitMoney;
@@ -48,6 +57,7 @@ int    g_originalDiagLoserMfeGe250 = 0;
 int    g_originalDiagLoserMfeGe500 = 0;
 int    g_originalDiagDataErrors = 0;
 int    g_originalDiagContextErrors = 0;
+int    g_originalDiagTrendContextErrors = 0;
 double g_originalDiagWinnerMfeTotal = 0.0;
 double g_originalDiagWinnerMaeTotal = 0.0;
 double g_originalDiagLoserMfeTotal = 0.0;
@@ -70,6 +80,7 @@ void ResetOriginalTradeDiagnostics()
    g_originalDiagLoserMfeGe500 = 0;
    g_originalDiagDataErrors = 0;
    g_originalDiagContextErrors = 0;
+   g_originalDiagTrendContextErrors = 0;
    g_originalDiagWinnerMfeTotal = 0.0;
    g_originalDiagWinnerMaeTotal = 0.0;
    g_originalDiagLoserMfeTotal = 0.0;
@@ -153,6 +164,116 @@ double ReadOriginalDiagnosticEmaPrice()
    if(CopyBuffer(g_handles.originalDiagEMA, 0, 1, 1, emaBuffer) != 1)
       return 0.0;
    return emaBuffer[0];
+  }
+
+//+------------------------------------------------------------------+
+double ReadOriginalDiagnosticEmaPriceAtShift(const int shift)
+  {
+   if(g_handles.originalDiagEMA == INVALID_HANDLE || shift < 0)
+      return 0.0;
+
+   double emaBuffer[1];
+   if(CopyBuffer(g_handles.originalDiagEMA, 0, shift, 1, emaBuffer) != 1)
+      return 0.0;
+   if(emaBuffer[0] == EMPTY_VALUE || !MathIsValidNumber(emaBuffer[0]))
+      return 0.0;
+   return emaBuffer[0];
+  }
+
+//+------------------------------------------------------------------+
+int OriginalDiagnosticTrendState(const double value)
+  {
+   if(value == EMPTY_VALUE || !MathIsValidNumber(value))
+      return 0;
+   if(value == 1.0)
+      return 1;
+   if(value == -1.0)
+      return -1;
+   return 0;
+  }
+
+//+------------------------------------------------------------------+
+int ReadOriginalDiagnosticBufferTrendAge(const int handle,
+                                         const int bufferIndex,
+                                         const int entryDirection)
+  {
+   if(handle == INVALID_HANDLE || entryDirection == 0)
+      return 0;
+
+   double trendBuffer[];
+   ArraySetAsSeries(trendBuffer, true);
+   int copied = CopyBuffer(handle, bufferIndex, 1,
+                           ORIGINAL_DIAG_TREND_AGE_LOOKBACK, trendBuffer);
+   if(copied <= 0)
+      return 0;
+
+   int currentState = OriginalDiagnosticTrendState(trendBuffer[0]);
+   if(currentState == 0)
+      return 0;
+
+   int ageBars = 0;
+   for(int i = 0; i < copied; i++)
+     {
+      int state = OriginalDiagnosticTrendState(trendBuffer[i]);
+      if(state != currentState)
+         break;
+      ageBars++;
+     }
+
+   return entryDirection * currentState * ageBars;
+  }
+
+//+------------------------------------------------------------------+
+int ReadOriginalDiagnosticPsarTrendAge(const int handle,
+                                       const ENUM_TIMEFRAMES timeframe,
+                                       const int entryDirection)
+  {
+   if(handle == INVALID_HANDLE || entryDirection == 0)
+      return 0;
+
+   ENUM_TIMEFRAMES resolvedTimeframe = (timeframe == PERIOD_CURRENT)
+                                      ? (ENUM_TIMEFRAMES)_Period
+                                      : timeframe;
+   double psarBuffer[];
+   double closeBuffer[];
+   ArraySetAsSeries(psarBuffer, true);
+   ArraySetAsSeries(closeBuffer, true);
+
+   int copiedPsar = CopyBuffer(handle, 0, 1,
+                               ORIGINAL_DIAG_TREND_AGE_LOOKBACK, psarBuffer);
+   int copiedClose = CopyClose(_Symbol, resolvedTimeframe, 1,
+                               ORIGINAL_DIAG_TREND_AGE_LOOKBACK, closeBuffer);
+   int copied = MathMin(copiedPsar, copiedClose);
+   if(copied <= 0)
+      return 0;
+
+   int currentState = 0;
+   int ageBars = 0;
+   for(int i = 0; i < copied; i++)
+     {
+      if(psarBuffer[i] == EMPTY_VALUE ||
+         !MathIsValidNumber(psarBuffer[i]) ||
+         !MathIsValidNumber(closeBuffer[i]))
+         break;
+
+      int state = 0;
+      if(closeBuffer[i] > psarBuffer[i])
+         state = 1;
+      else if(closeBuffer[i] < psarBuffer[i])
+         state = -1;
+
+      if(i == 0)
+        {
+         currentState = state;
+         if(currentState == 0)
+            return 0;
+        }
+      if(state != currentState)
+         break;
+      ageBars++;
+     }
+
+   return entryDirection * currentState * ageBars;
   }
 
 //+------------------------------------------------------------------+
@@ -277,6 +398,60 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
             " SignalAge=", g_originalDiagnostics[index].signalAgeBars);
      }
 
+   int mainPsarHandle = (g_handles.mainPSAR != INVALID_HANDLE
+                         ? g_handles.mainPSAR : g_handles.psar);
+   int mainSuperTrendHandle = (g_handles.mainSuperTrend != INVALID_HANDLE
+                               ? g_handles.mainSuperTrend : g_handles.superTrend);
+   double emaShift6 = ReadOriginalDiagnosticEmaPriceAtShift(6);
+   double emaShift11 = ReadOriginalDiagnosticEmaPriceAtShift(11);
+
+   g_originalDiagnostics[index].hiloAgeBars = 0;
+   g_originalDiagnostics[index].psarAgeBars = 0;
+   g_originalDiagnostics[index].superTrendAgeBars = 0;
+   g_originalDiagnostics[index].stMtfAgeBars = 0;
+   g_originalDiagnostics[index].emaSlope5Atr = 0.0;
+   g_originalDiagnostics[index].emaSlope10Atr = 0.0;
+
+   if(InpUseMainHiLoFilter)
+      g_originalDiagnostics[index].hiloAgeBars =
+         ReadOriginalDiagnosticBufferTrendAge(g_handles.hilo, 8, direction);
+   if(InpUseMainPsarFilter)
+      g_originalDiagnostics[index].psarAgeBars =
+         ReadOriginalDiagnosticPsarTrendAge(mainPsarHandle,
+                                            InpMainPsarTimeframe, direction);
+   if(InpUseMainSuperTrendFilter)
+      g_originalDiagnostics[index].superTrendAgeBars =
+         ReadOriginalDiagnosticBufferTrendAge(mainSuperTrendHandle, 4, direction);
+   if(InpEnableSTMTF)
+      g_originalDiagnostics[index].stMtfAgeBars =
+         ReadOriginalDiagnosticBufferTrendAge(g_handles.stFilter, 4, direction);
+
+   g_originalDiagnostics[index].trendContextReady =
+      (atrPrice > 0.0 &&
+       emaShift6 > 0.0 &&
+       emaShift11 > 0.0 &&
+       (!InpUseMainHiLoFilter || g_originalDiagnostics[index].hiloAgeBars != 0) &&
+       (!InpUseMainPsarFilter || g_originalDiagnostics[index].psarAgeBars != 0) &&
+       (!InpUseMainSuperTrendFilter ||
+        g_originalDiagnostics[index].superTrendAgeBars != 0) &&
+       (!InpEnableSTMTF || g_originalDiagnostics[index].stMtfAgeBars != 0));
+   if(g_originalDiagnostics[index].trendContextReady)
+     {
+      g_originalDiagnostics[index].emaSlope5Atr =
+         direction * (g_originalDiagnostics[index].entryEmaPrice - emaShift6) / atrPrice;
+      g_originalDiagnostics[index].emaSlope10Atr =
+         direction * (g_originalDiagnostics[index].entryEmaPrice - emaShift11) / atrPrice;
+     }
+   else
+     {
+      g_originalDiagTrendContextErrors++;
+      Print("WARNING: [ORIGINAL_DIAG] Trend context not ready. PositionId=", positionId,
+            " HiLoAge=", g_originalDiagnostics[index].hiloAgeBars,
+            " PsarAge=", g_originalDiagnostics[index].psarAgeBars,
+            " SuperTrendAge=", g_originalDiagnostics[index].superTrendAgeBars,
+            " STMTFAge=", g_originalDiagnostics[index].stMtfAgeBars);
+     }
+
    MqlTick tick;
    g_originalDiagnostics[index].entrySpreadPoints = 0.0;
    if(SymbolInfoTick(_Symbol, tick) && _Point > 0.0)
@@ -307,7 +482,15 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
          "|Impulse5ATR=", DoubleToString(g_originalDiagnostics[index].impulse5Atr, 3),
          "|DistanceEMAATR=", DoubleToString(g_originalDiagnostics[index].distanceEmaAtr, 3),
          "|SignalDriftATR=", DoubleToString(g_originalDiagnostics[index].signalDriftAtr, 3),
-         "|ContextReady=", (g_originalDiagnostics[index].contextReady ? "true" : "false"));
+         "|ContextReady=", (g_originalDiagnostics[index].contextReady ? "true" : "false"),
+         "|HiLoAgeBars=", g_originalDiagnostics[index].hiloAgeBars,
+         "|PsarAgeBars=", g_originalDiagnostics[index].psarAgeBars,
+         "|SuperTrendAgeBars=", g_originalDiagnostics[index].superTrendAgeBars,
+         "|STMTFAgeBars=", g_originalDiagnostics[index].stMtfAgeBars,
+         "|EMASlope5ATR=", DoubleToString(g_originalDiagnostics[index].emaSlope5Atr, 3),
+         "|EMASlope10ATR=", DoubleToString(g_originalDiagnostics[index].emaSlope10Atr, 3),
+         "|TrendContextReady=",
+         (g_originalDiagnostics[index].trendContextReady ? "true" : "false"));
 
    if(pendingMatches)
       CancelOriginalTradeDiagnostic();
@@ -461,7 +644,8 @@ void PrintOriginalTradeDiagnosticsSummary()
          "|LoserAvgMAE=", DoubleToString(loserAvgMae, 1),
          "|ActiveRemaining=", CountActiveOriginalDiagnostics(),
          "|DataErrors=", g_originalDiagDataErrors,
-         "|ContextErrors=", g_originalDiagContextErrors);
+         "|ContextErrors=", g_originalDiagContextErrors,
+         "|TrendContextErrors=", g_originalDiagTrendContextErrors);
   }
 
 #endif // TS7_DIAGNOSTICS_ORIGINALTRADEDIAGNOSTICS_MQH
