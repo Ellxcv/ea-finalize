@@ -61,6 +61,23 @@ Telemetry tidak menambah filter, tidak mengubah harga/lot/SL/TP, dan tidak mengu
 ATR diagnostics bersifat opsional; kegagalan handle hanya menghasilkan nilai ATR nol dan tidak
 menghentikan EA.
 
+`Diagnostics/MarketStructureDiagnostics.mqh` menambahkan snapshot S/R observation-only bila
+`InpEnableOriginalStructureDiagnostics=true`. Algoritma memakai pivot HH/HL/LH/LL yang memerlukan
+candle kiri dan kanan. Loop berhenti pada shift 1, sehingga candle berjalan tidak dipakai untuk
+mengonfirmasi pivot. Modul hanya menghitung ketika original trade terbuka dan tidak menggambar
+object chart atau membawa dependency dashboard/Telegram.
+
+Jarak S/R dinormalisasi dengan ATR diagnostics:
+
+- BUY memakai jarak entry menuju resistance sebagai `DirectionalRoomATR`;
+- SELL memakai jarak entry menuju support sebagai `DirectionalRoomATR`;
+- nilai positif berarti level lawan masih berada di depan entry;
+- nilai negatif berarti harga entry sudah melewati level tersebut.
+
+Level yang belum tersedia ditulis sebagai `NA`, bukan nol. `StructureEvaluationErrors` menandai
+kegagalan membaca history, sedangkan `StructureMissingDirectionalLevel` dapat terjadi secara valid
+sebelum struktur lengkap terbentuk.
+
 Perubahan sebaiknya bergerak dari input dan kontrak state menuju satu modul perilaku, lalu
 diverifikasi pada entry point. Jangan menduplikasi source modul kembali ke folder global
 MQL5/Include/TS7; repository adalah sumber utama untuk project ini.
