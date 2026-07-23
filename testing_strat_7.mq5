@@ -113,6 +113,7 @@ int GetClassicRecoveryTrendDirection();
 #include "Include/TS7/Signals/SuperTrend.mqh"
 #include "Include/TS7/Filters/TimeFilter.mqh"
 #include "Include/TS7/Filters/SessionFilter.mqh"
+#include "Include/TS7/Filters/CciStaleBreakout.mqh"
 #include "Include/TS7/Core/DailyManager.mqh"
 #include "Include/TS7/Core/PositionManager.mqh"
 #include "Include/TS7/Core/RiskManager.mqh"
@@ -206,6 +207,8 @@ int OnInit()
    if(!ValidateRecoveryDistanceSignalInputs())
       return(INIT_PARAMETERS_INCORRECT);
 
+   ResetCciStaleBreakoutTelemetry();
+
 //--- Init symbol info
    if(!g_symbolInfo.Name(_Symbol))
      {
@@ -227,7 +230,8 @@ int OnInit()
    RecordStartOfDayEquity();
 
    Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber,
-         " CCISignalMode=", EnumToString(InpCciSignalMode));
+         " CCISignalMode=", EnumToString(InpCciSignalMode),
+         " CCIStaleBreakout=", (InpEnableCciStaleBreakoutConfirm ? "ON" : "OFF"));
 
 //--- Account Status dashboard (attach indikator ke chart utama)
    AttachAccountStatusDashboard(g_handles);
@@ -240,6 +244,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
+   PrintCciStaleBreakoutTelemetry();
    DetachAccountStatusDashboard();
    ReleaseAllHandles(g_handles);
    DeleteRecoveryLines();
@@ -438,7 +443,8 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_BUY) < InpMaxBuyPositions)
               {
-               if(ExecuteBuy(cciBuySignal))
+               if(IsCCIEntryAllowedByStaleBreakout(1, buySignalTime) &&
+                  ExecuteBuy(cciBuySignal))
                  {
                   g_lastBuySignalUsed = buySignalTime;
                   g_mainAllowBuySignalReuse = false;
@@ -488,7 +494,8 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_SELL) < InpMaxSellPositions)
               {
-               if(ExecuteSell(cciSellSignal))
+               if(IsCCIEntryAllowedByStaleBreakout(-1, sellSignalTime) &&
+                  ExecuteSell(cciSellSignal))
                  {
                   g_lastSellSignalUsed = sellSignalTime;
                   g_mainAllowSellSignalReuse = false;

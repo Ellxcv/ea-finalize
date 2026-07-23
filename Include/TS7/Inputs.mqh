@@ -24,6 +24,7 @@ input ENUM_MAIN_SIGNAL_REENTRY_MODE InpMainSignalReentryMode = MAIN_SIGNAL_REENT
 input group "CCI Settings"
 input int    InpCciLength              = 11;         // CCI length
 input int    InpCiLength               = 5;          // CI smoothing length
+input bool   InpEnableCciStaleBreakoutConfirm = false; // Require price breakout for CCI signals older than one bar
 
 input group "SuperTrend Settings"
 input bool   InpUseMainSuperTrendFilter = true;      // Main strategy: use SuperTrend confirmation
