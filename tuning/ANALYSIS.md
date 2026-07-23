@@ -81,6 +81,7 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | Trailing BE folder 18 | Original offset 200 | 44.23%* | 55.77%* | 81.90%* | 0.32 | 170.47% | -$7,752.57 | Reject; stop-out at 33% |
 | Trailing BE folder 19 | Original offset 100 | 44.44%* | 55.56%* | 82.61%* | 0.31 | 174.11% | -$7,863.97 | Reject; stop-out at 33% |
 | Trailing BE folder 20 | Original offset 50 | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Provisional accept |
+| Entry-context diagnostics folder 21 | Folder 20 + observation telemetry | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Accepted; no viable threshold |
 
 ## Daily consistency requirement
 
@@ -171,6 +172,21 @@ Tidak ada threshold monoton yang mendukung impulse atau spread guard langsung da
 Namun, 48 loser telah mencapai MFE minimal 500 points dan akhirnya rugi maksimal $1.01. Semua
 cycle ini berhenti pada recovery L1–L3. Breakeven floor pada trailing original layak diuji untuk
 mengurangi recovery dangkal, tetapi tidak dianggap sebagai solusi bagi 53 cycle recovery L4+.
+
+Folder 21 menguji konteks khusus 53 cycle L4+ setelah offset 50 diterapkan. Trading history folder
+20 dan 21 identik, seluruh 594 context record valid, dan error diagnostics nol. Median
+`Impulse3ATR`, `Impulse5ATR`, `DistanceEMAATR`, serta `SignalDriftATR` antara winner, recovery
+L1-L3, dan L4+ sangat overlap. AUC L4+ versus winner hanya 0.507-0.549.
+
+Tidak ada threshold satu-feature yang mampu menolak minimal 20% L4+ sambil membatasi winner yang
+ikut tertolak maksimal 10%. Pada batas winner 10%, hasil terbaik hanya menangkap 5-6 dari 53 L4+
+(9.4%-11.3%). Hasil ini juga tidak stabil ketika Januari-Februari dipisahkan dari Maret-Mei.
+Karena itu, jangan tambahkan impulse, EMA-distance, atau signal-drift guard dari run ini.
+
+Diagnosis berikutnya beralih dari magnitude harga ke struktur/transisi: usia sejak setiap trend
+filter berubah arah, slope trend direction-normalized, perubahan state CCI dari signal ke entry,
+posisi dalam recent range, dan perubahan regime volatilitas. Kelompok pertama yang diukur adalah
+trend-freshness dan slope; tetap observation-only.
 
 ### 5. ADX directional bias reduces exposure, not the original-entry problem
 
@@ -265,9 +281,10 @@ Untuk setiap run, jawab:
 | 2 | Directional trend strength dapat menolak falling knife | CCI3 + ADX_WITH_BIAS, M1/M5 | Original WR naik, recovery turun, active days >=80% | Tested; weak |
 | 3 | ADX smoothing 14 bar terlalu lambat | M5/25 dengan smoothing OFF | WR/recovery membaik tanpa DD/coverage rusak | Rejected; stop-out |
 | 4 | Strong dan normal CCI memiliki risiko berbeda | Test BOTH, NORMAL_ONLY, STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–12 next |
-| 5 | Impulse beberapa bar memicu deep recovery | Tambahkan directional impulse + distance-from-mean telemetry | Temukan separator loser L4+ tanpa merusak coverage | Implemented; folder 21 next |
+| 5 | Impulse beberapa bar memicu deep recovery | Tambahkan directional impulse + distance-from-mean telemetry | Temukan separator loser L4+ tanpa merusak coverage | Rejected; no separator |
 | 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50, 100, dan 200 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Offset 50 provisional; 100/200 rejected |
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
+| 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Next |
 
 ## Decision log
 
@@ -280,6 +297,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | CCI signal-type implementation | Prepare folders 10–12 | BOTH remains default; normal/strong receive separate telemetry | Backtest BOTH, NORMAL_ONLY, STRONG_ONLY |
 | 2026-07-23 | Original diagnostics folder 17 | Accept telemetry; do not add ATR/range/spread entry guard | Trades match control; entry features do not separate outcomes; 48 tiny losses reached MFE 500+ | Test original trailing breakeven offsets 50 and 100 |
 | 2026-07-23 | Trailing BE folders 18–20 | Keep offset 50 as provisional candidate; reject 100/200 | Offset 50 raises original WR to 47.47% with similar net/DD; larger offsets stop out during February shock | Stop offset tuning; diagnose entry context of 53 L4+ cycles |
+| 2026-07-23 | Entry-context diagnostics folder 21 | Do not add impulse/EMA-distance entry guard | History reproduced exactly; no feature reaches the 20% L4+ / 10% winner screen and none survives the time split | Instrument trend freshness and slope next |
 
 ## Compound readiness gate
 
