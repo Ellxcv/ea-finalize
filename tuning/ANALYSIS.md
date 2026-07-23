@@ -78,6 +78,9 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | ADX-study folder 8 | CCI3 + ADX bias M5/25 | 39.93% | 59.33% | 84.28% | 1.61 | 25.24% | $1,554.60 | Risk-filter candidate |
 | ADX-study folder 9 | M5/25, smoothing OFF | 36.00% | 63.00% | 82.54% | 0.31 | 95.72% | -$3,803.64 | Reject; stop-out |
 | Original diagnostics folder 17 | Folder 5 + MFE/MAE telemetry | 40.07% | 59.26% | 84.94% | 1.53 | 31.85% | $3,472.01 | Accepted; trades identical |
+| Trailing BE folder 18 | Original offset 200 | 44.23%* | 55.77%* | 81.90%* | 0.32 | 170.47% | -$7,752.57 | Reject; stop-out at 33% |
+| Trailing BE folder 19 | Original offset 100 | 44.44%* | 55.56%* | 82.61%* | 0.31 | 174.11% | -$7,863.97 | Reject; stop-out at 33% |
+| Trailing BE folder 20 | Original offset 50 | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Provisional accept |
 
 ## Daily consistency requirement
 
@@ -263,7 +266,7 @@ Untuk setiap run, jawab:
 | 3 | ADX smoothing 14 bar terlalu lambat | M5/25 dengan smoothing OFF | WR/recovery membaik tanpa DD/coverage rusak | Rejected; stop-out |
 | 4 | Strong dan normal CCI memiliki risiko berbeda | Test BOTH, NORMAL_ONLY, STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–12 next |
 | 5 | Impulse beberapa bar memicu deep recovery | Tambahkan directional impulse + distance-from-mean telemetry | Temukan separator loser L4+ tanpa merusak coverage | Single-candle ATR/range unsupported |
-| 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50 dan 100 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Implemented; folders 18–19 next |
+| 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50, 100, dan 200 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Offset 50 provisional; 100/200 rejected |
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 
 ## Decision log
@@ -276,6 +279,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | ADX smoothing-off folder 9 | Stop ADX parameter tuning | WR 36.00%, recovery 63.00%, and account nearly depleted on 2026-02-12 | Implement CCI signal-type separation, then impulse guard |
 | 2026-07-23 | CCI signal-type implementation | Prepare folders 10–12 | BOTH remains default; normal/strong receive separate telemetry | Backtest BOTH, NORMAL_ONLY, STRONG_ONLY |
 | 2026-07-23 | Original diagnostics folder 17 | Accept telemetry; do not add ATR/range/spread entry guard | Trades match control; entry features do not separate outcomes; 48 tiny losses reached MFE 500+ | Test original trailing breakeven offsets 50 and 100 |
+| 2026-07-23 | Trailing BE folders 18–20 | Keep offset 50 as provisional candidate; reject 100/200 | Offset 50 raises original WR to 47.47% with similar net/DD; larger offsets stop out during February shock | Stop offset tuning; diagnose entry context of 53 L4+ cycles |
 
 ## Compound readiness gate
 
