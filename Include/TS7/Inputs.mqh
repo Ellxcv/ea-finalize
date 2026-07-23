@@ -82,6 +82,7 @@ input group "Trailing Stop"
 input int    InpTrailingStartPoints    = 500;        // Start trailing after (points)
 input int    InpTrailingStepPoints     = 500;        // Move every (points)
 input int    InpTrailingDistancePoints = 500;        // SL distance when trailing (points)
+input int    InpTrailingBreakEvenOffsetPoints = 0;   // Minimum locked profit after trailing starts (0=legacy)
 
 input group "ADX Filter"
 input bool   InpEnableAdxFilter        = false;      // Enable ADX filter
