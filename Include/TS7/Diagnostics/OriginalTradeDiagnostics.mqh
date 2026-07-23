@@ -288,6 +288,15 @@ void FinalizeOriginalTradeDiagnostic(const ulong dealTicket,
    if(!InpEnableOriginalTradeDiagnostics)
       return;
 
+   // IsRecoveryDealByPosition() changes the selected history context.
+   // Re-select the closing deal before reading its position, price, and time.
+   if(!HistoryDealSelect(dealTicket))
+     {
+      g_originalDiagDataErrors++;
+      Print("WARNING: [ORIGINAL_DIAG] Cannot re-select close deal. Deal=", dealTicket);
+      return;
+     }
+
    long positionId = HistoryDealGetInteger(dealTicket, DEAL_POSITION_ID);
    int index = FindOriginalDiagnosticByPositionId(positionId);
    if(index < 0)
