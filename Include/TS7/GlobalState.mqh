@@ -25,6 +25,7 @@ struct SHandles
    int algoZone;
    int distEmaFast;
    int distEmaSlow;
+   int originalDiagATR;
 
    SHandles()
      {
@@ -46,6 +47,7 @@ struct SHandles
       algoZone = INVALID_HANDLE;
       distEmaFast = INVALID_HANDLE;
       distEmaSlow = INVALID_HANDLE;
+      originalDiagATR = INVALID_HANDLE;
      }
   };
 

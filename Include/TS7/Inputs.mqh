@@ -25,6 +25,10 @@ input group "CCI Settings"
 input int    InpCciLength              = 11;         // CCI length
 input int    InpCiLength               = 5;          // CI smoothing length
 
+input group "Original Trade Diagnostics"
+input bool   InpEnableOriginalTradeDiagnostics = false; // Log original-trade MFE/MAE without changing trading
+input int    InpOriginalDiagAtrPeriod  = 14;          // ATR period captured at original entry
+
 input group "SuperTrend Settings"
 input bool   InpUseMainSuperTrendFilter = true;      // Main strategy: use SuperTrend confirmation
 input int    InpSuperTrendAtrPeriod    = 50;         // SuperTrend ATR period

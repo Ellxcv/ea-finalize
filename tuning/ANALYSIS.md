@@ -77,6 +77,7 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | ADX-study folder 7 | CCI3 + ADX bias M5/20 | 40.69% | 58.45% | 84.80% | 1.55 | 34.10% | $1,980.02 | Weak improvement |
 | ADX-study folder 8 | CCI3 + ADX bias M5/25 | 39.93% | 59.33% | 84.28% | 1.61 | 25.24% | $1,554.60 | Risk-filter candidate |
 | ADX-study folder 9 | M5/25, smoothing OFF | 36.00% | 63.00% | 82.54% | 0.31 | 95.72% | -$3,803.64 | Reject; stop-out |
+| Original diagnostics folder 17 | Folder 5 control + telemetry | Pending | Pending | Pending | Pending | Pending | Pending | Verify identical trades |
 
 ## Daily consistency requirement
 
@@ -146,6 +147,17 @@ Entry tidak memiliki filter khusus untuk:
 Kegagalan validity 2 pada 2026-02-12 menunjukkan BUY recovery bertambah dari level 1 ke 10 hanya
 sekitar 12 menit saat harga jatuh cepat, lalu akun stop-out. Filter impulse/ATR lebih langsung
 menargetkan kejadian ini daripada menambah trend overlay lain.
+
+Sebelum menambahkan filter tersebut, folder 17 harus mengukur excursion setiap original trade.
+Fokus analisis berikutnya:
+
+1. Berapa banyak original loser yang sempat mencapai MFE cukup besar sebelum berbalik.
+2. Apakah loser dengan MFE rendah terkonsentrasi pada ATR/range candle atau spread tertentu.
+3. Apakah distribusi MFE/MAE berbeda menurut signal age, tipe CCI, sisi BUY/SELL, dan jam entry.
+4. Apakah exit original yang berbeda berpotensi menyelamatkan trade tanpa mengurangi winner.
+
+Filter atau aturan breakeven belum boleh diterapkan dari telemetry ini. Folder 17 adalah
+eksperimen observasi; history trade harus identik dengan control folder 5.
 
 ### 5. ADX directional bias reduces exposure, not the original-entry problem
 

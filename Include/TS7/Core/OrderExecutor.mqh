@@ -5,7 +5,7 @@
 #define TS7_CORE_ORDEREXECUTOR_MQH
 
 //+------------------------------------------------------------------+
-bool ExecuteBuy(const int cciSignalType)
+bool ExecuteBuy(const int cciSignalType, const datetime signalTime)
   {
    g_symbolInfo.RefreshRates();
    double ask = g_symbolInfo.Ask();
@@ -19,8 +19,10 @@ bool ExecuteBuy(const int cciSignalType)
    if(InpTakeProfitPoints > 0)
       tp = NormalizeDouble(ask + InpTakeProfitPoints * _Point, _Digits);
 
+   PrepareOriginalTradeDiagnostic(1, cciSignalType, signalTime);
    if(!g_trade.Buy(lot, _Symbol, ask, sl, tp, orderComment))
      {
+      CancelOriginalTradeDiagnostic();
       Print("ERROR: Buy failed. Error=", g_trade.ResultRetcode(),
             " Desc=", g_trade.ResultRetcodeDescription());
       return false;
@@ -35,7 +37,7 @@ bool ExecuteBuy(const int cciSignalType)
   }
 
 //+------------------------------------------------------------------+
-bool ExecuteSell(const int cciSignalType)
+bool ExecuteSell(const int cciSignalType, const datetime signalTime)
   {
    g_symbolInfo.RefreshRates();
    double bid = g_symbolInfo.Bid();
@@ -49,8 +51,10 @@ bool ExecuteSell(const int cciSignalType)
    if(InpTakeProfitPoints > 0)
       tp = NormalizeDouble(bid - InpTakeProfitPoints * _Point, _Digits);
 
+   PrepareOriginalTradeDiagnostic(-1, cciSignalType, signalTime);
    if(!g_trade.Sell(lot, _Symbol, bid, sl, tp, orderComment))
      {
+      CancelOriginalTradeDiagnostic();
       Print("ERROR: Sell failed. Error=", g_trade.ResultRetcode(),
             " Desc=", g_trade.ResultRetcodeDescription());
       return false;

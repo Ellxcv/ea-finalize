@@ -116,6 +116,7 @@ int GetClassicRecoveryTrendDirection();
 #include "Include/TS7/Core/DailyManager.mqh"
 #include "Include/TS7/Core/PositionManager.mqh"
 #include "Include/TS7/Core/RiskManager.mqh"
+#include "Include/TS7/Diagnostics/OriginalTradeDiagnostics.mqh"
 #include "Include/TS7/Core/OrderExecutor.mqh"
 #include "Include/TS7/Core/TrailingStop.mqh"
 #include "Include/TS7/Recovery/RecoveryUtils.mqh"
@@ -225,6 +226,7 @@ int OnInit()
 
 //--- Record start of day equity
    RecordStartOfDayEquity();
+   ResetOriginalTradeDiagnostics();
 
    Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber,
          " CCISignalMode=", EnumToString(InpCciSignalMode));
@@ -240,6 +242,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
+   PrintOriginalTradeDiagnosticsSummary();
    DetachAccountStatusDashboard();
    ReleaseAllHandles(g_handles);
    DeleteRecoveryLines();
@@ -251,6 +254,9 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
+//--- Observation-only original-trade excursion tracking
+   UpdateOriginalTradeDiagnostics();
+
 //--- Cek daily reset
    RecordStartOfDayEquity();
 
@@ -438,7 +444,7 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_BUY) < InpMaxBuyPositions)
               {
-               if(ExecuteBuy(cciBuySignal))
+               if(ExecuteBuy(cciBuySignal, buySignalTime))
                  {
                   g_lastBuySignalUsed = buySignalTime;
                   g_mainAllowBuySignalReuse = false;
@@ -488,7 +494,7 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_SELL) < InpMaxSellPositions)
               {
-               if(ExecuteSell(cciSellSignal))
+               if(ExecuteSell(cciSellSignal, sellSignalTime))
                  {
                   g_lastSellSignalUsed = sellSignalTime;
                   g_mainAllowSellSignalReuse = false;
@@ -655,7 +661,10 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
    string dealComment = HistoryDealGetString(trans.deal, DEAL_COMMENT);
 
    if(dealEntry == DEAL_ENTRY_IN)
+     {
+      RegisterOriginalTradeDiagnosticFromEntryDeal(trans.deal, dealComment);
       return;
+     }
    if(dealEntry != DEAL_ENTRY_OUT)
       return;
 
@@ -672,6 +681,8 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
    bool isStrategy = !isRecovery;
    if(isStrategy)
      {
+      FinalizeOriginalTradeDiagnostic(trans.deal, profit, dealReason);
+
       // DEAL_TYPE_SELL on OUT = closing BUY, DEAL_TYPE_BUY on OUT = closing SELL
       if(dealType == DEAL_TYPE_SELL)
         {

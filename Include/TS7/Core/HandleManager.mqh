@@ -263,6 +263,18 @@ bool CreateAllHandles(SHandles &handles)
         }
      }
 
+//--- Observation-only ATR snapshot for original-trade diagnostics
+   if(InpEnableOriginalTradeDiagnostics)
+     {
+      int diagnosticAtrPeriod = MathMax(1, InpOriginalDiagAtrPeriod);
+      handles.originalDiagATR = iATR(_Symbol, _Period, diagnosticAtrPeriod);
+      if(handles.originalDiagATR == INVALID_HANDLE)
+        {
+         Print("WARNING: [ORIGINAL_DIAG] Failed creating ATR handle. Error=", GetLastError(),
+               ". MFE/MAE logging remains active with EntryATRPoints=0.");
+        }
+     }
+
    return true;
   }
 
@@ -286,6 +298,7 @@ void ReleaseAllHandles(SHandles &handles)
    if(handles.algoZone != INVALID_HANDLE)    { IndicatorRelease(handles.algoZone);    handles.algoZone = INVALID_HANDLE; }
    if(handles.distEmaFast != INVALID_HANDLE) { IndicatorRelease(handles.distEmaFast); handles.distEmaFast = INVALID_HANDLE; }
    if(handles.distEmaSlow != INVALID_HANDLE) { IndicatorRelease(handles.distEmaSlow); handles.distEmaSlow = INVALID_HANDLE; }
+   if(handles.originalDiagATR != INVALID_HANDLE) { IndicatorRelease(handles.originalDiagATR); handles.originalDiagATR = INVALID_HANDLE; }
   }
 
 #endif // TS7_CORE_HANDLE_MANAGER_MQH
