@@ -263,7 +263,7 @@ Untuk setiap run, jawab:
 | 3 | ADX smoothing 14 bar terlalu lambat | M5/25 dengan smoothing OFF | WR/recovery membaik tanpa DD/coverage rusak | Rejected; stop-out |
 | 4 | Strong dan normal CCI memiliki risiko berbeda | Test BOTH, NORMAL_ONLY, STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–12 next |
 | 5 | Impulse beberapa bar memicu deep recovery | Tambahkan directional impulse + distance-from-mean telemetry | Temukan separator loser L4+ tanpa merusak coverage | Single-candle ATR/range unsupported |
-| 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50 dan 100 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Recommended next |
+| 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50 dan 100 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Implemented; folders 18–19 next |
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 
 ## Decision log

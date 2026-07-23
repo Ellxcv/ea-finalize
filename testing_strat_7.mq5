@@ -202,6 +202,18 @@ int OnInit()
       Print("ERROR: InpMainRiskPercent must be > 0 when InpMainLotMode=MAIN_LOT_DYNAMIC.");
       return(INIT_PARAMETERS_INCORRECT);
      }
+   if(InpTrailingBreakEvenOffsetPoints < 0)
+     {
+      Print("ERROR: InpTrailingBreakEvenOffsetPoints must be >= 0.");
+      return(INIT_PARAMETERS_INCORRECT);
+     }
+   if(InpTrailingBreakEvenOffsetPoints > 0 &&
+      (InpTrailingStartPoints <= 0 ||
+       InpTrailingBreakEvenOffsetPoints >= InpTrailingStartPoints))
+     {
+      Print("ERROR: Positive trailing breakeven offset requires trailing enabled and offset < start points.");
+      return(INIT_PARAMETERS_INCORRECT);
+     }
    if(!ValidateRecoveryClassicSignalInputs())
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateRecoveryDistanceSignalInputs())
