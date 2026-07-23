@@ -20,6 +20,12 @@ struct SOriginalTradeDiagnostic
    double             entryAtrPoints;
    double             entryRangePoints;
    double             entrySpreadPoints;
+   double             entryEmaPrice;
+   double             impulse3Atr;
+   double             impulse5Atr;
+   double             distanceEmaAtr;
+   double             signalDriftAtr;
+   bool               contextReady;
    double             mfePoints;
    double             maePoints;
    double             maxProfitMoney;
@@ -41,6 +47,7 @@ int    g_originalDiagLoserMfeLt100 = 0;
 int    g_originalDiagLoserMfeGe250 = 0;
 int    g_originalDiagLoserMfeGe500 = 0;
 int    g_originalDiagDataErrors = 0;
+int    g_originalDiagContextErrors = 0;
 double g_originalDiagWinnerMfeTotal = 0.0;
 double g_originalDiagWinnerMaeTotal = 0.0;
 double g_originalDiagLoserMfeTotal = 0.0;
@@ -62,6 +69,7 @@ void ResetOriginalTradeDiagnostics()
    g_originalDiagLoserMfeGe250 = 0;
    g_originalDiagLoserMfeGe500 = 0;
    g_originalDiagDataErrors = 0;
+   g_originalDiagContextErrors = 0;
    g_originalDiagWinnerMfeTotal = 0.0;
    g_originalDiagWinnerMaeTotal = 0.0;
    g_originalDiagLoserMfeTotal = 0.0;
@@ -133,6 +141,18 @@ double ReadOriginalDiagnosticAtrPoints()
    if(_Point <= 0.0)
       return 0.0;
    return atrBuffer[0] / _Point;
+  }
+
+//+------------------------------------------------------------------+
+double ReadOriginalDiagnosticEmaPrice()
+  {
+   if(g_handles.originalDiagEMA == INVALID_HANDLE)
+      return 0.0;
+
+   double emaBuffer[1];
+   if(CopyBuffer(g_handles.originalDiagEMA, 0, 1, 1, emaBuffer) != 1)
+      return 0.0;
+   return emaBuffer[0];
   }
 
 //+------------------------------------------------------------------+
@@ -220,6 +240,42 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
    g_originalDiagnostics[index].entryAtrPoints = ReadOriginalDiagnosticAtrPoints();
    g_originalDiagnostics[index].entryRangePoints =
       (_Point > 0.0 ? (iHigh(_Symbol, _Period, 1) - iLow(_Symbol, _Period, 1)) / _Point : 0.0);
+   g_originalDiagnostics[index].entryEmaPrice = ReadOriginalDiagnosticEmaPrice();
+
+   double atrPrice = g_originalDiagnostics[index].entryAtrPoints * _Point;
+   double close1 = iClose(_Symbol, _Period, 1);
+   double close4 = iClose(_Symbol, _Period, 4);
+   double close6 = iClose(_Symbol, _Period, 6);
+   double signalClose =
+      (g_originalDiagnostics[index].signalAgeBars >= 0
+       ? iClose(_Symbol, _Period, g_originalDiagnostics[index].signalAgeBars)
+       : 0.0);
+   g_originalDiagnostics[index].contextReady =
+      (atrPrice > 0.0 &&
+       g_originalDiagnostics[index].entryEmaPrice > 0.0 &&
+       close1 > 0.0 && close4 > 0.0 && close6 > 0.0 && signalClose > 0.0);
+   g_originalDiagnostics[index].impulse3Atr = 0.0;
+   g_originalDiagnostics[index].impulse5Atr = 0.0;
+   g_originalDiagnostics[index].distanceEmaAtr = 0.0;
+   g_originalDiagnostics[index].signalDriftAtr = 0.0;
+   if(g_originalDiagnostics[index].contextReady)
+     {
+      g_originalDiagnostics[index].impulse3Atr =
+         direction * (close1 - close4) / atrPrice;
+      g_originalDiagnostics[index].impulse5Atr =
+         direction * (close1 - close6) / atrPrice;
+      g_originalDiagnostics[index].distanceEmaAtr =
+         direction * (g_originalDiagnostics[index].entryPrice
+                      - g_originalDiagnostics[index].entryEmaPrice) / atrPrice;
+      g_originalDiagnostics[index].signalDriftAtr =
+         direction * (g_originalDiagnostics[index].entryPrice - signalClose) / atrPrice;
+     }
+   else
+     {
+      g_originalDiagContextErrors++;
+      Print("WARNING: [ORIGINAL_DIAG] Entry context not ready. PositionId=", positionId,
+            " SignalAge=", g_originalDiagnostics[index].signalAgeBars);
+     }
 
    MqlTick tick;
    g_originalDiagnostics[index].entrySpreadPoints = 0.0;
@@ -245,7 +301,13 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
          "|Volume=", DoubleToString(g_originalDiagnostics[index].entryVolume, 2),
          "|EntryATRPoints=", DoubleToString(g_originalDiagnostics[index].entryAtrPoints, 1),
          "|EntryRangePoints=", DoubleToString(g_originalDiagnostics[index].entryRangePoints, 1),
-         "|SpreadPoints=", DoubleToString(g_originalDiagnostics[index].entrySpreadPoints, 1));
+         "|SpreadPoints=", DoubleToString(g_originalDiagnostics[index].entrySpreadPoints, 1),
+         "|EntryEMA=", DoubleToString(g_originalDiagnostics[index].entryEmaPrice, _Digits),
+         "|Impulse3ATR=", DoubleToString(g_originalDiagnostics[index].impulse3Atr, 3),
+         "|Impulse5ATR=", DoubleToString(g_originalDiagnostics[index].impulse5Atr, 3),
+         "|DistanceEMAATR=", DoubleToString(g_originalDiagnostics[index].distanceEmaAtr, 3),
+         "|SignalDriftATR=", DoubleToString(g_originalDiagnostics[index].signalDriftAtr, 3),
+         "|ContextReady=", (g_originalDiagnostics[index].contextReady ? "true" : "false"));
 
    if(pendingMatches)
       CancelOriginalTradeDiagnostic();
@@ -398,7 +460,8 @@ void PrintOriginalTradeDiagnosticsSummary()
          "|LoserAvgMFE=", DoubleToString(loserAvgMfe, 1),
          "|LoserAvgMAE=", DoubleToString(loserAvgMae, 1),
          "|ActiveRemaining=", CountActiveOriginalDiagnostics(),
-         "|DataErrors=", g_originalDiagDataErrors);
+         "|DataErrors=", g_originalDiagDataErrors,
+         "|ContextErrors=", g_originalDiagContextErrors);
   }
 
 #endif // TS7_DIAGNOSTICS_ORIGINALTRADEDIAGNOSTICS_MQH

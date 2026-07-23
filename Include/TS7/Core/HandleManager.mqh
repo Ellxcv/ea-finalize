@@ -273,6 +273,15 @@ bool CreateAllHandles(SHandles &handles)
          Print("WARNING: [ORIGINAL_DIAG] Failed creating ATR handle. Error=", GetLastError(),
                ". MFE/MAE logging remains active with EntryATRPoints=0.");
         }
+
+      int diagnosticEmaPeriod = MathMax(1, InpOriginalDiagEmaPeriod);
+      handles.originalDiagEMA = iMA(_Symbol, _Period, diagnosticEmaPeriod, 0,
+                                    MODE_EMA, PRICE_CLOSE);
+      if(handles.originalDiagEMA == INVALID_HANDLE)
+        {
+         Print("WARNING: [ORIGINAL_DIAG] Failed creating EMA handle. Error=", GetLastError(),
+               ". Entry context will be marked not ready.");
+        }
      }
 
    return true;
@@ -299,6 +308,7 @@ void ReleaseAllHandles(SHandles &handles)
    if(handles.distEmaFast != INVALID_HANDLE) { IndicatorRelease(handles.distEmaFast); handles.distEmaFast = INVALID_HANDLE; }
    if(handles.distEmaSlow != INVALID_HANDLE) { IndicatorRelease(handles.distEmaSlow); handles.distEmaSlow = INVALID_HANDLE; }
    if(handles.originalDiagATR != INVALID_HANDLE) { IndicatorRelease(handles.originalDiagATR); handles.originalDiagATR = INVALID_HANDLE; }
+   if(handles.originalDiagEMA != INVALID_HANDLE) { IndicatorRelease(handles.originalDiagEMA); handles.originalDiagEMA = INVALID_HANDLE; }
   }
 
 #endif // TS7_CORE_HANDLE_MANAGER_MQH
