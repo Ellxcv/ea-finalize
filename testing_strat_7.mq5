@@ -117,6 +117,7 @@ int GetClassicRecoveryTrendDirection();
 #include "Include/TS7/Core/PositionManager.mqh"
 #include "Include/TS7/Core/RiskManager.mqh"
 #include "Include/TS7/Diagnostics/OriginalTradeDiagnostics.mqh"
+#include "Include/TS7/Filters/LateConfirmationGuard.mqh"
 #include "Include/TS7/Core/OrderExecutor.mqh"
 #include "Include/TS7/Core/TrailingStop.mqh"
 #include "Include/TS7/Recovery/RecoveryUtils.mqh"
@@ -218,6 +219,8 @@ int OnInit()
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateRecoveryDistanceSignalInputs())
       return(INIT_PARAMETERS_INCORRECT);
+   if(!ValidateLateConfirmationGuardInputs())
+      return(INIT_PARAMETERS_INCORRECT);
 
 //--- Init symbol info
    if(!g_symbolInfo.Name(_Symbol))
@@ -235,10 +238,16 @@ int OnInit()
 //--- Buat indicator handles
    if(!CreateAllHandles(g_handles))
       return(INIT_FAILED);
+   if(!ValidateLateConfirmationGuardHandles())
+     {
+      ReleaseAllHandles(g_handles);
+      return(INIT_FAILED);
+     }
 
 //--- Record start of day equity
    RecordStartOfDayEquity();
    ResetOriginalTradeDiagnostics();
+   ResetLateConfirmationGuard();
 
    Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber,
          " CCISignalMode=", EnumToString(InpCciSignalMode));
@@ -255,6 +264,7 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    PrintOriginalTradeDiagnosticsSummary();
+   PrintLateConfirmationGuardSummary();
    DetachAccountStatusDashboard();
    ReleaseAllHandles(g_handles);
    DeleteRecoveryLines();
@@ -456,7 +466,11 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_BUY) < InpMaxBuyPositions)
               {
-               if(ExecuteBuy(cciBuySignal, buySignalTime))
+               if(ShouldBlockLateConfirmationEntry(1, cciBuySignal, buySignalTime))
+                 {
+                  PrintDebug("BUY blocked: late confirmation guard");
+                 }
+               else if(ExecuteBuy(cciBuySignal, buySignalTime))
                  {
                   g_lastBuySignalUsed = buySignalTime;
                   g_mainAllowBuySignalReuse = false;
@@ -506,7 +520,11 @@ void OnTick()
               }
             else if(CountMainStrategyPositionsByType(POSITION_TYPE_SELL) < InpMaxSellPositions)
               {
-               if(ExecuteSell(cciSellSignal, sellSignalTime))
+               if(ShouldBlockLateConfirmationEntry(-1, cciSellSignal, sellSignalTime))
+                 {
+                  PrintDebug("SELL blocked: late confirmation guard");
+                 }
+               else if(ExecuteSell(cciSellSignal, sellSignalTime))
                  {
                   g_lastSellSignalUsed = sellSignalTime;
                   g_mainAllowSellSignalReuse = false;

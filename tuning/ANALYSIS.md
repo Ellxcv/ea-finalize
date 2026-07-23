@@ -230,6 +230,22 @@ dapat merupakan gejala confirmation stack yang terlambat, bukan akar masalah CCI
 guard 80/110 ditahan. Folder 24 lebih dahulu mencatat alignment setiap filter pada saat candle CCI
 selesai dan pada saat entry tanpa mengubah keputusan trading.
 
+Folder 24 mereproduksi folder 23 secara exact dan seluruh 594 confirmation context valid. HiLo
+terlambat pada 96.2% L4+ tetapi juga 87.9% winner, sehingga terlalu umum untuk dijadikan filter
+sendiri. PSAR lebih sering terlambat pada winner daripada L4+, sedangkan SuperTrend M5 tidak
+terlambat pada satu pun L4+.
+
+Exact `LateConfirmMask=5` menjadi kandidat terdekat: HiLo dan SuperTrend M1 berlawanan pada
+signal-close sementara PSAR dan SuperTrend M5 sudah aligned. Pola ini menandai 14/53 L4+ (26.4%),
+29/282 winner (10.3%), dan 34/259 L1-L3 (13.1%). Hasil stabil pada time split: 25.0% versus 10.5%
+di Januari-Februari dan 28.0% versus 10.1% di Maret-Mei. Rule meleset tipis dari batas winner 10%
+dan dipilih hanya sebagai eksperimen default-off, bukan filter final.
+
+Pada 13/14 L4+ bertanda mask 5, HiLo dan SuperTrend M1 berubah bersamaan pada candle terakhir
+sebelum entry. Karena mematikan salah satunya masih menyisakan filter lain sebagai gate, ablation
+satu filter tidak diprioritaskan. Guard harus berlaku simetris untuk BUY dan SELL sesuai tujuan EA;
+variant direction-only tidak digunakan.
+
 ### 5. ADX directional bias reduces exposure, not the original-entry problem
 
 ADX M1/20 menurunkan original win rate menjadi 39.16% dan menaikkan recovery rate menjadi 60.42%.
@@ -329,7 +345,8 @@ Untuk setiap run, jawab:
 | 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected; no separator |
 | 9 | Momentum CCI berubah antara candle signal dan entry | Tambahkan CCI signal/entry value dan direction-normalized delta telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Candidate found |
 | 10 | CCI reversal sudah overshoot sebelum entry | Guard `CI magnitude >=80 && directional CCI entry >=110` | L4+ turun; WR/recovery membaik tanpa merusak PF/DD/coverage | Paused; may mask late confirmation |
-| 11 | Salah satu trend filter baru mengonfirmasi setelah signal CCI | Log alignment HiLo, PSAR, ST M1, dan ST M5 pada signal-close versus entry | Identifikasi late confirmer yang terkonsentrasi pada L4+ dan stabil pada time split | Implemented; folder 24 next |
+| 11 | Salah satu trend filter baru mengonfirmasi setelah signal CCI | Log alignment HiLo, PSAR, ST M1, dan ST M5 pada signal-close versus entry | Identifikasi late confirmer yang terkonsentrasi pada L4+ dan stabil pada time split | Mask 5 candidate found |
+| 12 | HiLo+ST M1 simultaneous late flip menghasilkan chase entry | Block exact mask 5 secara simetris, default-off | WR naik, recovery dan L4+ turun, coverage/PF/net/DD terjaga | Implemented; folder 25 next |
 
 ## Decision log
 
@@ -348,6 +365,8 @@ Untuk setiap run, jawab:
 | 2026-07-23 | CCI-progression diagnostics implementation | Prepare folder 23 as observation-only | Read raw CCI and smoothed CI from the same custom-indicator handle at signal and entry | Reproduce folder 22, then screen CCI persistence |
 | 2026-07-23 | CCI-progression diagnostics folder 23 | Pause overshoot guard; inspect confirmation stack first | 80/110 pair is BUY-heavy and may only capture entry delayed by four simultaneous trend filters | Add signal-time versus entry-time filter telemetry |
 | 2026-07-23 | Signal-time confirmation diagnostics implementation | Prepare folder 24 as observation-only | Preserve folder 23 decisions while identifying which filter changes from misaligned at CCI signal-close to aligned at entry | Reproduce folder 23, then compare winner, L1-L3, and L4+ masks |
+| 2026-07-23 | Signal-time confirmation diagnostics folder 24 | Test exact mask 5; do not accept it yet | 14/53 L4+ versus 29/282 winner, stable across time, with simultaneous HiLo+ST M1 final-bar flips on 13/14 deep cases | Implement one symmetric OFF/ON guard |
+| 2026-07-23 | Late-confirmation guard implementation | Prepare folder 25 | Apply exact mask 5 equally to BUY and SELL; leave CCI overshoot and recovery unchanged | Backtest against folder 24 control |
 
 ## Compound readiness gate
 
