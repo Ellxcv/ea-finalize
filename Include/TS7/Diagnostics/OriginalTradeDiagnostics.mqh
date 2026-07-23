@@ -45,6 +45,17 @@ struct SOriginalTradeDiagnostic
    double             cciGapEntryDirectional;
    bool               cciMomentumHeld;
    bool               cciContextReady;
+   int                hiloSignalAlign;
+   int                hiloEntryAlign;
+   int                psarSignalAlign;
+   int                psarEntryAlign;
+   int                superTrendSignalAlign;
+   int                superTrendEntryAlign;
+   int                stMtfSignalAlign;
+   int                stMtfEntryAlign;
+   int                lateConfirmMask;
+   int                lateConfirmCount;
+   bool               confirmationContextReady;
    double             mfePoints;
    double             maePoints;
    double             maxProfitMoney;
@@ -69,6 +80,7 @@ int    g_originalDiagDataErrors = 0;
 int    g_originalDiagContextErrors = 0;
 int    g_originalDiagTrendContextErrors = 0;
 int    g_originalDiagCciContextErrors = 0;
+int    g_originalDiagConfirmationContextErrors = 0;
 double g_originalDiagWinnerMfeTotal = 0.0;
 double g_originalDiagWinnerMaeTotal = 0.0;
 double g_originalDiagLoserMfeTotal = 0.0;
@@ -93,6 +105,7 @@ void ResetOriginalTradeDiagnostics()
    g_originalDiagContextErrors = 0;
    g_originalDiagTrendContextErrors = 0;
    g_originalDiagCciContextErrors = 0;
+   g_originalDiagConfirmationContextErrors = 0;
    g_originalDiagWinnerMfeTotal = 0.0;
    g_originalDiagWinnerMaeTotal = 0.0;
    g_originalDiagLoserMfeTotal = 0.0;
@@ -202,6 +215,81 @@ int OriginalDiagnosticTrendState(const double value)
    if(value == -1.0)
       return -1;
    return 0;
+  }
+
+//+------------------------------------------------------------------+
+int FindOriginalDiagnosticLastClosedShift(const ENUM_TIMEFRAMES timeframe,
+                                          const datetime observationTime)
+  {
+   ENUM_TIMEFRAMES resolvedTimeframe = (timeframe == PERIOD_CURRENT)
+                                      ? (ENUM_TIMEFRAMES)_Period
+                                      : timeframe;
+   int periodSeconds = PeriodSeconds(resolvedTimeframe);
+   if(observationTime <= 0 || periodSeconds <= 0)
+      return -1;
+
+   // Probe the instant immediately before observationTime. If that bar had
+   // not closed yet at the observation time, use the preceding bar instead.
+   int shift = iBarShift(_Symbol, resolvedTimeframe, observationTime - 1, false);
+   if(shift < 0)
+      return -1;
+
+   datetime barOpenTime = iTime(_Symbol, resolvedTimeframe, shift);
+   if(barOpenTime <= 0)
+      return -1;
+   if(barOpenTime + periodSeconds > observationTime)
+      shift++;
+
+   return shift;
+  }
+
+//+------------------------------------------------------------------+
+bool ReadOriginalDiagnosticBufferTrendState(const int handle,
+                                            const int bufferIndex,
+                                            const int shift,
+                                            int &state)
+  {
+   state = 0;
+   if(handle == INVALID_HANDLE || shift < 1)
+      return false;
+
+   double trendBuffer[1];
+   if(CopyBuffer(handle, bufferIndex, shift, 1, trendBuffer) != 1)
+      return false;
+
+   state = OriginalDiagnosticTrendState(trendBuffer[0]);
+   return (state != 0);
+  }
+
+//+------------------------------------------------------------------+
+bool ReadOriginalDiagnosticPsarTrendState(const int handle,
+                                          const ENUM_TIMEFRAMES timeframe,
+                                          const int shift,
+                                          int &state)
+  {
+   state = 0;
+   if(handle == INVALID_HANDLE || shift < 1)
+      return false;
+
+   ENUM_TIMEFRAMES resolvedTimeframe = (timeframe == PERIOD_CURRENT)
+                                      ? (ENUM_TIMEFRAMES)_Period
+                                      : timeframe;
+   double psarBuffer[1];
+   double closeBuffer[1];
+   if(CopyBuffer(handle, 0, shift, 1, psarBuffer) != 1 ||
+      CopyClose(_Symbol, resolvedTimeframe, shift, 1, closeBuffer) != 1)
+      return false;
+   if(psarBuffer[0] == EMPTY_VALUE ||
+      !MathIsValidNumber(psarBuffer[0]) ||
+      !MathIsValidNumber(closeBuffer[0]))
+      return false;
+
+   if(closeBuffer[0] > psarBuffer[0])
+      state = 1;
+   else if(closeBuffer[0] < psarBuffer[0])
+      state = -1;
+
+   return (state != 0);
   }
 
 //+------------------------------------------------------------------+
@@ -536,6 +624,143 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
             " EntryReady=", (entryCciReady ? "true" : "false"));
      }
 
+   g_originalDiagnostics[index].hiloSignalAlign = 0;
+   g_originalDiagnostics[index].hiloEntryAlign = 0;
+   g_originalDiagnostics[index].psarSignalAlign = 0;
+   g_originalDiagnostics[index].psarEntryAlign = 0;
+   g_originalDiagnostics[index].superTrendSignalAlign = 0;
+   g_originalDiagnostics[index].superTrendEntryAlign = 0;
+   g_originalDiagnostics[index].stMtfSignalAlign = 0;
+   g_originalDiagnostics[index].stMtfEntryAlign = 0;
+   g_originalDiagnostics[index].lateConfirmMask = 0;
+   g_originalDiagnostics[index].lateConfirmCount = 0;
+
+   ENUM_TIMEFRAMES mainPsarTimeframe =
+      (g_handles.mainPSAR != INVALID_HANDLE
+       ? InpMainPsarTimeframe : (ENUM_TIMEFRAMES)_Period);
+   ENUM_TIMEFRAMES mainSuperTrendTimeframe =
+      (g_handles.mainSuperTrend != INVALID_HANDLE
+       ? InpMainSuperTrendTimeframe : (ENUM_TIMEFRAMES)_Period);
+   datetime signalCloseTime =
+      (g_originalDiagnostics[index].signalTime > 0
+       ? g_originalDiagnostics[index].signalTime + PeriodSeconds((ENUM_TIMEFRAMES)_Period)
+       : 0);
+   bool signalConfirmationReady = (signalCloseTime > 0);
+   bool entryConfirmationReady = true;
+   int signalState = 0;
+   int entryState = 0;
+   bool signalStateReady = false;
+   bool entryStateReady = false;
+   int signalShift = -1;
+
+   if(InpUseMainHiLoFilter)
+     {
+      signalShift =
+         FindOriginalDiagnosticLastClosedShift((ENUM_TIMEFRAMES)_Period,
+                                               signalCloseTime);
+      signalStateReady =
+         ReadOriginalDiagnosticBufferTrendState(g_handles.hilo, 8,
+                                                signalShift, signalState);
+      entryStateReady =
+         ReadOriginalDiagnosticBufferTrendState(g_handles.hilo, 8, 1, entryState);
+      signalConfirmationReady = signalConfirmationReady && signalStateReady;
+      entryConfirmationReady = entryConfirmationReady && entryStateReady;
+      if(signalStateReady)
+         g_originalDiagnostics[index].hiloSignalAlign = direction * signalState;
+      if(entryStateReady)
+         g_originalDiagnostics[index].hiloEntryAlign = direction * entryState;
+      if(signalStateReady && entryStateReady &&
+         g_originalDiagnostics[index].hiloSignalAlign != 1 &&
+         g_originalDiagnostics[index].hiloEntryAlign == 1)
+         g_originalDiagnostics[index].lateConfirmMask |= 1;
+     }
+
+   if(InpUseMainPsarFilter)
+     {
+      signalShift =
+         FindOriginalDiagnosticLastClosedShift(mainPsarTimeframe, signalCloseTime);
+      signalStateReady =
+         ReadOriginalDiagnosticPsarTrendState(mainPsarHandle, mainPsarTimeframe,
+                                              signalShift, signalState);
+      entryStateReady =
+         ReadOriginalDiagnosticPsarTrendState(mainPsarHandle, mainPsarTimeframe,
+                                              1, entryState);
+      signalConfirmationReady = signalConfirmationReady && signalStateReady;
+      entryConfirmationReady = entryConfirmationReady && entryStateReady;
+      if(signalStateReady)
+         g_originalDiagnostics[index].psarSignalAlign = direction * signalState;
+      if(entryStateReady)
+         g_originalDiagnostics[index].psarEntryAlign = direction * entryState;
+      if(signalStateReady && entryStateReady &&
+         g_originalDiagnostics[index].psarSignalAlign != 1 &&
+         g_originalDiagnostics[index].psarEntryAlign == 1)
+         g_originalDiagnostics[index].lateConfirmMask |= 2;
+     }
+
+   if(InpUseMainSuperTrendFilter)
+     {
+      signalShift =
+         FindOriginalDiagnosticLastClosedShift(mainSuperTrendTimeframe,
+                                               signalCloseTime);
+      signalStateReady =
+         ReadOriginalDiagnosticBufferTrendState(mainSuperTrendHandle, 4,
+                                                signalShift, signalState);
+      entryStateReady =
+         ReadOriginalDiagnosticBufferTrendState(mainSuperTrendHandle, 4,
+                                                1, entryState);
+      signalConfirmationReady = signalConfirmationReady && signalStateReady;
+      entryConfirmationReady = entryConfirmationReady && entryStateReady;
+      if(signalStateReady)
+         g_originalDiagnostics[index].superTrendSignalAlign = direction * signalState;
+      if(entryStateReady)
+         g_originalDiagnostics[index].superTrendEntryAlign = direction * entryState;
+      if(signalStateReady && entryStateReady &&
+         g_originalDiagnostics[index].superTrendSignalAlign != 1 &&
+         g_originalDiagnostics[index].superTrendEntryAlign == 1)
+         g_originalDiagnostics[index].lateConfirmMask |= 4;
+     }
+
+   if(InpEnableSTMTF)
+     {
+      signalShift =
+         FindOriginalDiagnosticLastClosedShift(InpSTFilterTF, signalCloseTime);
+      signalStateReady =
+         ReadOriginalDiagnosticBufferTrendState(g_handles.stFilter, 4,
+                                                signalShift, signalState);
+      entryStateReady =
+         ReadOriginalDiagnosticBufferTrendState(g_handles.stFilter, 4,
+                                                1, entryState);
+      signalConfirmationReady = signalConfirmationReady && signalStateReady;
+      entryConfirmationReady = entryConfirmationReady && entryStateReady;
+      if(signalStateReady)
+         g_originalDiagnostics[index].stMtfSignalAlign = direction * signalState;
+      if(entryStateReady)
+         g_originalDiagnostics[index].stMtfEntryAlign = direction * entryState;
+      if(signalStateReady && entryStateReady &&
+         g_originalDiagnostics[index].stMtfSignalAlign != 1 &&
+         g_originalDiagnostics[index].stMtfEntryAlign == 1)
+         g_originalDiagnostics[index].lateConfirmMask |= 8;
+     }
+
+   for(int confirmationBit = 1; confirmationBit <= 8; confirmationBit *= 2)
+     {
+      if((g_originalDiagnostics[index].lateConfirmMask & confirmationBit) != 0)
+         g_originalDiagnostics[index].lateConfirmCount++;
+     }
+
+   g_originalDiagnostics[index].confirmationContextReady =
+      signalConfirmationReady && entryConfirmationReady;
+   if(!g_originalDiagnostics[index].confirmationContextReady)
+     {
+      g_originalDiagConfirmationContextErrors++;
+      Print("WARNING: [ORIGINAL_DIAG] Confirmation context not ready. PositionId=",
+            positionId,
+            " SignalClose=", TimeToString(signalCloseTime,
+                                           TIME_DATE | TIME_MINUTES | TIME_SECONDS),
+            " SignalReady=", (signalConfirmationReady ? "true" : "false"),
+            " EntryReady=", (entryConfirmationReady ? "true" : "false"));
+     }
+
    MqlTick tick;
    g_originalDiagnostics[index].entrySpreadPoints = 0.0;
    if(SymbolInfoTick(_Symbol, tick) && _Point > 0.0)
@@ -563,6 +788,29 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
       (g_originalDiagnostics[index].cciMomentumHeld ? "true" : "false") +
       "|CCIContextReady=" +
       (g_originalDiagnostics[index].cciContextReady ? "true" : "false");
+   string confirmationContextLog =
+      "|HiLoSignalAlign=" +
+      IntegerToString(g_originalDiagnostics[index].hiloSignalAlign) +
+      "|HiLoEntryAlign=" +
+      IntegerToString(g_originalDiagnostics[index].hiloEntryAlign) +
+      "|PsarSignalAlign=" +
+      IntegerToString(g_originalDiagnostics[index].psarSignalAlign) +
+      "|PsarEntryAlign=" +
+      IntegerToString(g_originalDiagnostics[index].psarEntryAlign) +
+      "|SuperTrendSignalAlign=" +
+      IntegerToString(g_originalDiagnostics[index].superTrendSignalAlign) +
+      "|SuperTrendEntryAlign=" +
+      IntegerToString(g_originalDiagnostics[index].superTrendEntryAlign) +
+      "|STMTFSignalAlign=" +
+      IntegerToString(g_originalDiagnostics[index].stMtfSignalAlign) +
+      "|STMTFEntryAlign=" +
+      IntegerToString(g_originalDiagnostics[index].stMtfEntryAlign) +
+      "|LateConfirmMask=" +
+      IntegerToString(g_originalDiagnostics[index].lateConfirmMask) +
+      "|LateConfirmCount=" +
+      IntegerToString(g_originalDiagnostics[index].lateConfirmCount) +
+      "|ConfirmationContextReady=" +
+      (g_originalDiagnostics[index].confirmationContextReady ? "true" : "false");
 
    Print("TS7_ORIGINAL_OPEN",
          "|PositionId=", positionId,
@@ -593,7 +841,8 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
          "|EMASlope10ATR=", DoubleToString(g_originalDiagnostics[index].emaSlope10Atr, 3),
          "|TrendContextReady=",
          (g_originalDiagnostics[index].trendContextReady ? "true" : "false"),
-         cciContextLog);
+         cciContextLog,
+         confirmationContextLog);
 
    if(pendingMatches)
       CancelOriginalTradeDiagnostic();
@@ -749,7 +998,8 @@ void PrintOriginalTradeDiagnosticsSummary()
          "|DataErrors=", g_originalDiagDataErrors,
          "|ContextErrors=", g_originalDiagContextErrors,
          "|TrendContextErrors=", g_originalDiagTrendContextErrors,
-         "|CCIContextErrors=", g_originalDiagCciContextErrors);
+         "|CCIContextErrors=", g_originalDiagCciContextErrors,
+         "|ConfirmationContextErrors=", g_originalDiagConfirmationContextErrors);
   }
 
 #endif // TS7_DIAGNOSTICS_ORIGINALTRADEDIAGNOSTICS_MQH

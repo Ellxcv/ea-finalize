@@ -224,6 +224,12 @@ hanya 1/20 L4+ versus 11/116 winner, sehingga symmetric rule membawa false rejec
 produktif. Kandidat perlu diuji sebagai BUY_ONLY dan BOTH secara default-off. Threshold tidak boleh
 dituning lagi pada dataset ini, dan variant terpilih harus lolos out-of-sample.
 
+Namun, sekitar 94% signal yang akhirnya entry sudah berumur dua atau tiga bar. HiLo, PSAR,
+SuperTrend M1, dan SuperTrend M5 semuanya harus searah pada bar entry, sehingga pola overshoot
+dapat merupakan gejala confirmation stack yang terlambat, bukan akar masalah CCI. Implementasi
+guard 80/110 ditahan. Folder 24 lebih dahulu mencatat alignment setiap filter pada saat candle CCI
+selesai dan pada saat entry tanpa mengubah keputusan trading.
+
 ### 5. ADX directional bias reduces exposure, not the original-entry problem
 
 ADX M1/20 menurunkan original win rate menjadi 39.16% dan menaikkan recovery rate menjadi 60.42%.
@@ -322,7 +328,8 @@ Untuk setiap run, jawab:
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 | 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected; no separator |
 | 9 | Momentum CCI berubah antara candle signal dan entry | Tambahkan CCI signal/entry value dan direction-normalized delta telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Candidate found |
-| 10 | CCI reversal sudah overshoot sebelum entry | Guard `CI magnitude >=80 && directional CCI entry >=110` | L4+ turun; WR/recovery membaik tanpa merusak PF/DD/coverage | Implement BUY_ONLY/BOTH |
+| 10 | CCI reversal sudah overshoot sebelum entry | Guard `CI magnitude >=80 && directional CCI entry >=110` | L4+ turun; WR/recovery membaik tanpa merusak PF/DD/coverage | Paused; may mask late confirmation |
+| 11 | Salah satu trend filter baru mengonfirmasi setelah signal CCI | Log alignment HiLo, PSAR, ST M1, dan ST M5 pada signal-close versus entry | Identifikasi late confirmer yang terkonsentrasi pada L4+ dan stabil pada time split | Implemented; folder 24 next |
 
 ## Decision log
 
@@ -339,7 +346,8 @@ Untuk setiap run, jawab:
 | 2026-07-23 | Trend-freshness diagnostics implementation | Prepare folder 22 as observation-only | Log signed age for four trend filters and direction-normalized EMA slope without changing decisions | Reproduce folder 21, then screen L4+ separation |
 | 2026-07-23 | Trend-freshness diagnostics folder 22 | Do not add trend-age or EMA-slope guard | History reproduced exactly; no single or paired rule reaches the screen on both time splits | Instrument CCI progression from signal to entry |
 | 2026-07-23 | CCI-progression diagnostics implementation | Prepare folder 23 as observation-only | Read raw CCI and smoothed CI from the same custom-indicator handle at signal and entry | Reproduce folder 22, then screen CCI persistence |
-| 2026-07-23 | CCI-progression diagnostics folder 23 | Test overshoot candidate; do not accept it yet | 80/110 pair meets total and time-split screen, but separation is BUY-heavy and threshold-sensitive | Implement default-off BUY_ONLY and BOTH variants |
+| 2026-07-23 | CCI-progression diagnostics folder 23 | Pause overshoot guard; inspect confirmation stack first | 80/110 pair is BUY-heavy and may only capture entry delayed by four simultaneous trend filters | Add signal-time versus entry-time filter telemetry |
+| 2026-07-23 | Signal-time confirmation diagnostics implementation | Prepare folder 24 as observation-only | Preserve folder 23 decisions while identifying which filter changes from misaligned at CCI signal-close to aligned at entry | Reproduce folder 23, then compare winner, L1-L3, and L4+ masks |
 
 ## Compound readiness gate
 
