@@ -77,7 +77,7 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | ADX-study folder 7 | CCI3 + ADX bias M5/20 | 40.69% | 58.45% | 84.80% | 1.55 | 34.10% | $1,980.02 | Weak improvement |
 | ADX-study folder 8 | CCI3 + ADX bias M5/25 | 39.93% | 59.33% | 84.28% | 1.61 | 25.24% | $1,554.60 | Risk-filter candidate |
 | ADX-study folder 9 | M5/25, smoothing OFF | 36.00% | 63.00% | 82.54% | 0.31 | 95.72% | -$3,803.64 | Reject; stop-out |
-| Original diagnostics folder 17 | Folder 5 control + telemetry | Pending | Pending | Pending | Pending | Pending | Pending | Verify identical trades |
+| Original diagnostics folder 17 | Folder 5 + MFE/MAE telemetry | 40.07% | 59.26% | 84.94% | 1.53 | 31.85% | $3,472.01 | Accepted; trades identical |
 
 ## Daily consistency requirement
 
@@ -158,6 +158,16 @@ Fokus analisis berikutnya:
 
 Filter atau aturan breakeven belum boleh diterapkan dari telemetry ini. Folder 17 adalah
 eksperimen observasi; history trade harus identik dengan control folder 5.
+
+Folder 17 lulus acceptance check: 594 pasangan original OPEN/CLOSE, `DataErrors=0`,
+`ActiveRemaining=0`, dan seluruh 5,565 baris trading sama dengan folder 5 setelah komentar
+telemetry diabaikan. Winner berjumlah 238, loser 352, dan neutral 4.
+
+Entry ATR, single-candle range, range/ATR, dan spread hampir identik antara winner dan loser.
+Tidak ada threshold monoton yang mendukung impulse atau spread guard langsung dari fitur tersebut.
+Namun, 48 loser telah mencapai MFE minimal 500 points dan akhirnya rugi maksimal $1.01. Semua
+cycle ini berhenti pada recovery L1–L3. Breakeven floor pada trailing original layak diuji untuk
+mengurangi recovery dangkal, tetapi tidak dianggap sebagai solusi bagi 53 cycle recovery L4+.
 
 ### 5. ADX directional bias reduces exposure, not the original-entry problem
 
@@ -252,8 +262,9 @@ Untuk setiap run, jawab:
 | 2 | Directional trend strength dapat menolak falling knife | CCI3 + ADX_WITH_BIAS, M1/M5 | Original WR naik, recovery turun, active days >=80% | Tested; weak |
 | 3 | ADX smoothing 14 bar terlalu lambat | M5/25 dengan smoothing OFF | WR/recovery membaik tanpa DD/coverage rusak | Rejected; stop-out |
 | 4 | Strong dan normal CCI memiliki risiko berbeda | Test BOTH, NORMAL_ONLY, STRONG_ONLY | Identifikasi tipe dengan expectancy terbaik | Implemented; folders 10–12 next |
-| 5 | Impulse candle memicu deep recovery | Tambahkan ATR/candle-shock + spread guard | L4+ dan intraday DD turun | Proposed code |
-| 6 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
+| 5 | Impulse beberapa bar memicu deep recovery | Tambahkan directional impulse + distance-from-mean telemetry | Temukan separator loser L4+ tanpa merusak coverage | Single-candle ATR/range unsupported |
+| 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50 dan 100 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Recommended next |
+| 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 
 ## Decision log
 
@@ -264,6 +275,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | ADX directional-bias study 5–8 | Do not accept ADX as WR solution | M1 worsened WR; M5 improvements were not material | Test M5/25 without smoothing once, then split CCI signal types |
 | 2026-07-23 | ADX smoothing-off folder 9 | Stop ADX parameter tuning | WR 36.00%, recovery 63.00%, and account nearly depleted on 2026-02-12 | Implement CCI signal-type separation, then impulse guard |
 | 2026-07-23 | CCI signal-type implementation | Prepare folders 10–12 | BOTH remains default; normal/strong receive separate telemetry | Backtest BOTH, NORMAL_ONLY, STRONG_ONLY |
+| 2026-07-23 | Original diagnostics folder 17 | Accept telemetry; do not add ATR/range/spread entry guard | Trades match control; entry features do not separate outcomes; 48 tiny losses reached MFE 500+ | Test original trailing breakeven offsets 50 and 100 |
 
 ## Compound readiness gate
 
