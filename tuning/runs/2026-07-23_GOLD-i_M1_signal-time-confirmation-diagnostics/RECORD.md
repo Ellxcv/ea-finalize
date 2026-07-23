@@ -85,4 +85,40 @@ menonaktifkan satu filter per run; jangan menonaktifkan seluruh confirmation sta
 
 ## Status
 
-Implementation ready; menunggu Strategy Tester folder 24. Raw report dan journal tidak di-commit.
+Completed and accepted. Preset folder 24 identik dengan folder 23 selain timestamp, sedangkan
+report HTML dan grafik utama identik byte-for-byte. Journal berisi 594 record dengan
+`ConfirmationContextReady=true`; seluruh entry alignment valid, mask/count konsisten, dan semua
+error counter nol.
+
+## Results
+
+Outcome tetap 282 winner, 259 recovery L1-L3, dan 53 recovery L4+. Frekuensi filter yang belum
+aligned pada signal-close:
+
+| Filter terlambat | Winner | L1-L3 | L4+ |
+| --- | ---: | ---: | ---: |
+| HiLo | 248/282 (87.9%) | 231/259 (89.2%) | 51/53 (96.2%) |
+| PSAR | 191/282 (67.7%) | 166/259 (64.1%) | 29/53 (54.7%) |
+| SuperTrend M1 | 141/282 (50.0%) | 137/259 (52.9%) | 32/53 (60.4%) |
+| SuperTrend M5 | 8/282 (2.8%) | 4/259 (1.5%) | 0/53 (0.0%) |
+
+Tidak ada satu filter atau mask yang memenuhi screen ketat `>=20% L4+` dan `<=10% winner` pada
+full period serta kedua time split. Kandidat terdekat adalah exact `LateConfirmMask=5`: HiLo dan
+SuperTrend M1 berlawanan pada signal-close, sedangkan PSAR dan SuperTrend M5 sudah aligned.
+
+| Split | Winner ditandai | L1-L3 ditandai | L4+ ditandai |
+| --- | ---: | ---: | ---: |
+| Jan-Feb | 13/124 (10.5%) | 16/126 (12.7%) | 7/28 (25.0%) |
+| Mar-May | 16/158 (10.1%) | 18/133 (13.5%) | 7/25 (28.0%) |
+| Full | 29/282 (10.3%) | 34/259 (13.1%) | 14/53 (26.4%) |
+
+Pada 13 dari 14 L4+ yang bertanda mask 5, HiLo dan SuperTrend M1 sama-sama berubah pada candle
+closed terakhir sebelum entry. Entry mask 5 memiliki original win rate 37.7%, recovery rate 62.3%,
+dan L4+ share 18.2%; entry lain memiliki win rate 48.9%, recovery rate 51.1%, dan L4+ share 7.5%.
+Menghapus mask 5 secara offline masih menyisakan original entry pada seluruh 84 active days,
+tetapi hanya full Strategy Tester yang dapat mengukur perubahan urutan trade.
+
+PSAR dan SuperTrend M5 tidak dipilih untuk ablation: PSAR lebih sering terlambat pada winner,
+sedangkan SuperTrend M5 tidak terlambat pada satu pun L4+. Single-filter ablation HiLo/ST M1 juga
+ditunda karena keduanya berubah bersamaan pada hampir seluruh mask-5 L4+. Kandidat berikutnya
+adalah guard simetris exact mask 5, default-off. Raw report dan journal tidak di-commit.

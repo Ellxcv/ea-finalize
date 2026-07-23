@@ -30,6 +30,9 @@ input bool   InpEnableOriginalTradeDiagnostics = false; // Log original-trade MF
 input int    InpOriginalDiagAtrPeriod  = 14;          // ATR period captured at original entry
 input int    InpOriginalDiagEmaPeriod  = 50;          // EMA period for entry distance telemetry
 
+input group "Late Confirmation Guard"
+input bool   InpEnableLateConfirmationGuard = false;  // Block symmetric HiLo+ST M1 late-confirm pattern
+
 input group "SuperTrend Settings"
 input bool   InpUseMainSuperTrendFilter = true;      // Main strategy: use SuperTrend confirmation
 input int    InpSuperTrendAtrPeriod    = 50;         // SuperTrend ATR period
