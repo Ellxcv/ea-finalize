@@ -126,6 +126,13 @@ GetCCISignal mengembalikan signal type, tetapi entry utama hanya memakai nilai b
 mengabaikan perbedaan strong/normal. Strong counter-trend cross saat CCI berada di luar +/-100
 diperlakukan sama dengan normal cross. Ini perlu dibuat dapat dipilih dan dianalisis terpisah.
 
+Audit dependency sebelum folder 23 menemukan bahwa source eksternal `cciCustomFix.mq5` yang
+terpasang memiliki ekspresi cross yang membandingkan buffer dengan dirinya sendiri, sementara EX5
+yang dipakai backtest tetap menghasilkan signal. Source dan binary kemungkinan tidak sinkron.
+Jangan compile ulang atau mempublikasikan dependency tersebut sebelum source, binary, dan lisensi
+direkonsiliasi. Folder 23 diikat ke hash source/EX5 yang dicatat pada record run dan membaca handle
+EX5 yang sama dengan entry EA.
+
 ### 2. Signal-time mismatch
 
 CCI dapat berasal dari satu sampai beberapa candle sebelumnya, sedangkan HiLo, PSAR, SuperTrend,
@@ -299,7 +306,7 @@ Untuk setiap run, jawab:
 | 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50, 100, dan 200 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Offset 50 provisional; 100/200 rejected |
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 | 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected; no separator |
-| 9 | Momentum CCI berubah antara candle signal dan entry | Tambahkan CCI signal/entry value dan direction-normalized delta telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Next |
+| 9 | Momentum CCI berubah antara candle signal dan entry | Tambahkan CCI signal/entry value dan direction-normalized delta telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Implemented; folder 23 next |
 
 ## Decision log
 
@@ -315,6 +322,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | Entry-context diagnostics folder 21 | Do not add impulse/EMA-distance entry guard | History reproduced exactly; no feature reaches the 20% L4+ / 10% winner screen and none survives the time split | Instrument trend freshness and slope next |
 | 2026-07-23 | Trend-freshness diagnostics implementation | Prepare folder 22 as observation-only | Log signed age for four trend filters and direction-normalized EMA slope without changing decisions | Reproduce folder 21, then screen L4+ separation |
 | 2026-07-23 | Trend-freshness diagnostics folder 22 | Do not add trend-age or EMA-slope guard | History reproduced exactly; no single or paired rule reaches the screen on both time splits | Instrument CCI progression from signal to entry |
+| 2026-07-23 | CCI-progression diagnostics implementation | Prepare folder 23 as observation-only | Read raw CCI and smoothed CI from the same custom-indicator handle at signal and entry | Reproduce folder 22, then screen CCI persistence |
 
 ## Compound readiness gate
 

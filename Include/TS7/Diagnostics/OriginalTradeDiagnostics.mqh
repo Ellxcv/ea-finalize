@@ -35,6 +35,16 @@ struct SOriginalTradeDiagnostic
    double             emaSlope5Atr;
    double             emaSlope10Atr;
    bool               trendContextReady;
+   double             cciSignalValue;
+   double             ciSignalValue;
+   double             cciEntryValue;
+   double             ciEntryValue;
+   double             cciTriggerMagnitude;
+   double             cciDeltaDirectional;
+   double             cciGapSignalDirectional;
+   double             cciGapEntryDirectional;
+   bool               cciMomentumHeld;
+   bool               cciContextReady;
    double             mfePoints;
    double             maePoints;
    double             maxProfitMoney;
@@ -58,6 +68,7 @@ int    g_originalDiagLoserMfeGe500 = 0;
 int    g_originalDiagDataErrors = 0;
 int    g_originalDiagContextErrors = 0;
 int    g_originalDiagTrendContextErrors = 0;
+int    g_originalDiagCciContextErrors = 0;
 double g_originalDiagWinnerMfeTotal = 0.0;
 double g_originalDiagWinnerMaeTotal = 0.0;
 double g_originalDiagLoserMfeTotal = 0.0;
@@ -81,6 +92,7 @@ void ResetOriginalTradeDiagnostics()
    g_originalDiagDataErrors = 0;
    g_originalDiagContextErrors = 0;
    g_originalDiagTrendContextErrors = 0;
+   g_originalDiagCciContextErrors = 0;
    g_originalDiagWinnerMfeTotal = 0.0;
    g_originalDiagWinnerMaeTotal = 0.0;
    g_originalDiagLoserMfeTotal = 0.0;
@@ -277,6 +289,32 @@ int ReadOriginalDiagnosticPsarTrendAge(const int handle,
   }
 
 //+------------------------------------------------------------------+
+bool ReadOriginalDiagnosticCciPairAtShift(const int shift,
+                                          double &cciValue,
+                                          double &ciValue)
+  {
+   cciValue = 0.0;
+   ciValue = 0.0;
+   if(g_handles.cci == INVALID_HANDLE || shift < 1)
+      return false;
+
+   double cciBuffer[1];
+   double ciBuffer[1];
+   if(CopyBuffer(g_handles.cci, 0, shift, 1, cciBuffer) != 1 ||
+      CopyBuffer(g_handles.cci, 3, shift, 1, ciBuffer) != 1)
+      return false;
+   if(cciBuffer[0] == EMPTY_VALUE ||
+      ciBuffer[0] == EMPTY_VALUE ||
+      !MathIsValidNumber(cciBuffer[0]) ||
+      !MathIsValidNumber(ciBuffer[0]))
+      return false;
+
+   cciValue = cciBuffer[0];
+   ciValue = ciBuffer[0];
+   return true;
+  }
+
+//+------------------------------------------------------------------+
 void UpdateOriginalDiagnosticExcursion(const int index,
                                        const double closeablePrice,
                                        const double currentMoney)
@@ -452,6 +490,52 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
             " STMTFAge=", g_originalDiagnostics[index].stMtfAgeBars);
      }
 
+   g_originalDiagnostics[index].cciSignalValue = 0.0;
+   g_originalDiagnostics[index].ciSignalValue = 0.0;
+   g_originalDiagnostics[index].cciEntryValue = 0.0;
+   g_originalDiagnostics[index].ciEntryValue = 0.0;
+   g_originalDiagnostics[index].cciTriggerMagnitude = 0.0;
+   g_originalDiagnostics[index].cciDeltaDirectional = 0.0;
+   g_originalDiagnostics[index].cciGapSignalDirectional = 0.0;
+   g_originalDiagnostics[index].cciGapEntryDirectional = 0.0;
+   g_originalDiagnostics[index].cciMomentumHeld = false;
+
+   bool signalCciReady =
+      ReadOriginalDiagnosticCciPairAtShift(
+         g_originalDiagnostics[index].signalAgeBars,
+         g_originalDiagnostics[index].cciSignalValue,
+         g_originalDiagnostics[index].ciSignalValue);
+   bool entryCciReady =
+      ReadOriginalDiagnosticCciPairAtShift(
+         1,
+         g_originalDiagnostics[index].cciEntryValue,
+         g_originalDiagnostics[index].ciEntryValue);
+   g_originalDiagnostics[index].cciContextReady = signalCciReady && entryCciReady;
+   if(g_originalDiagnostics[index].cciContextReady)
+     {
+      g_originalDiagnostics[index].cciTriggerMagnitude =
+         -direction * g_originalDiagnostics[index].cciSignalValue;
+      g_originalDiagnostics[index].cciDeltaDirectional =
+         direction * (g_originalDiagnostics[index].cciEntryValue
+                      - g_originalDiagnostics[index].cciSignalValue);
+      g_originalDiagnostics[index].cciGapSignalDirectional =
+         direction * (g_originalDiagnostics[index].cciSignalValue
+                      - g_originalDiagnostics[index].ciSignalValue);
+      g_originalDiagnostics[index].cciGapEntryDirectional =
+         direction * (g_originalDiagnostics[index].cciEntryValue
+                      - g_originalDiagnostics[index].ciEntryValue);
+      g_originalDiagnostics[index].cciMomentumHeld =
+         (g_originalDiagnostics[index].cciGapEntryDirectional > 0.0);
+     }
+   else
+     {
+      g_originalDiagCciContextErrors++;
+      Print("WARNING: [ORIGINAL_DIAG] CCI context not ready. PositionId=", positionId,
+            " SignalAge=", g_originalDiagnostics[index].signalAgeBars,
+            " SignalReady=", (signalCciReady ? "true" : "false"),
+            " EntryReady=", (entryCciReady ? "true" : "false"));
+     }
+
    MqlTick tick;
    g_originalDiagnostics[index].entrySpreadPoints = 0.0;
    if(SymbolInfoTick(_Symbol, tick) && _Point > 0.0)
@@ -461,6 +545,24 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
    g_originalDiagnostics[index].maePoints = 0.0;
    g_originalDiagnostics[index].maxProfitMoney = 0.0;
    g_originalDiagnostics[index].maxLossMoney = 0.0;
+
+   string cciContextLog =
+      "|CCISignal=" + DoubleToString(g_originalDiagnostics[index].cciSignalValue, 3) +
+      "|CISignal=" + DoubleToString(g_originalDiagnostics[index].ciSignalValue, 3) +
+      "|CCIEntry=" + DoubleToString(g_originalDiagnostics[index].cciEntryValue, 3) +
+      "|CIEntry=" + DoubleToString(g_originalDiagnostics[index].ciEntryValue, 3) +
+      "|CCITriggerMagnitude=" +
+      DoubleToString(g_originalDiagnostics[index].cciTriggerMagnitude, 3) +
+      "|CCIDeltaDir=" +
+      DoubleToString(g_originalDiagnostics[index].cciDeltaDirectional, 3) +
+      "|CCIGapSignalDir=" +
+      DoubleToString(g_originalDiagnostics[index].cciGapSignalDirectional, 3) +
+      "|CCIGapEntryDir=" +
+      DoubleToString(g_originalDiagnostics[index].cciGapEntryDirectional, 3) +
+      "|CCIMomentumHeld=" +
+      (g_originalDiagnostics[index].cciMomentumHeld ? "true" : "false") +
+      "|CCIContextReady=" +
+      (g_originalDiagnostics[index].cciContextReady ? "true" : "false");
 
    Print("TS7_ORIGINAL_OPEN",
          "|PositionId=", positionId,
@@ -490,7 +592,8 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
          "|EMASlope5ATR=", DoubleToString(g_originalDiagnostics[index].emaSlope5Atr, 3),
          "|EMASlope10ATR=", DoubleToString(g_originalDiagnostics[index].emaSlope10Atr, 3),
          "|TrendContextReady=",
-         (g_originalDiagnostics[index].trendContextReady ? "true" : "false"));
+         (g_originalDiagnostics[index].trendContextReady ? "true" : "false"),
+         cciContextLog);
 
    if(pendingMatches)
       CancelOriginalTradeDiagnostic();
@@ -645,7 +748,8 @@ void PrintOriginalTradeDiagnosticsSummary()
          "|ActiveRemaining=", CountActiveOriginalDiagnostics(),
          "|DataErrors=", g_originalDiagDataErrors,
          "|ContextErrors=", g_originalDiagContextErrors,
-         "|TrendContextErrors=", g_originalDiagTrendContextErrors);
+         "|TrendContextErrors=", g_originalDiagTrendContextErrors,
+         "|CCIContextErrors=", g_originalDiagCciContextErrors);
   }
 
 #endif // TS7_DIAGNOSTICS_ORIGINALTRADEDIAGNOSTICS_MQH
