@@ -47,6 +47,16 @@ open, close, dan deinitialization. Prefix log terstruktur:
 - `TS7_ORIGINAL_CLOSE`: MFE/MAE points dan money, hasil akhir, durasi, serta alasan close;
 - `TS7_ORIGINAL_SUMMARY`: jumlah winner/loser, kelompok MFE loser, error data, dan record tersisa.
 
+Entry context tambahan memakai nilai signed yang sudah dinormalisasi terhadap arah posisi:
+
+- `Impulse3ATR`/`Impulse5ATR`: perubahan close tiga/lima bar terakhir dibagi ATR;
+- `DistanceEMAATR`: jarak entry dari EMA diagnostics dibagi ATR;
+- `SignalDriftATR`: perpindahan dari close candle sinyal ke harga entry dibagi ATR.
+
+Nilai positif berarti bergerak searah BUY/SELL dan nilai negatif berarti bergerak melawan arah
+posisi. `ContextReady=false` dan `ContextErrors>0` menandai data feature yang tidak lengkap agar
+nilai fallback nol tidak dipakai dalam analisis.
+
 Telemetry tidak menambah filter, tidak mengubah harga/lot/SL/TP, dan tidak mengubah recovery.
 ATR diagnostics bersifat opsional; kegagalan handle hanya menghasilkan nilai ATR nol dan tidak
 menghentikan EA.

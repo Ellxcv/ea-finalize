@@ -26,6 +26,7 @@ struct SHandles
    int distEmaFast;
    int distEmaSlow;
    int originalDiagATR;
+   int originalDiagEMA;
 
    SHandles()
      {
@@ -48,6 +49,7 @@ struct SHandles
       distEmaFast = INVALID_HANDLE;
       distEmaSlow = INVALID_HANDLE;
       originalDiagATR = INVALID_HANDLE;
+      originalDiagEMA = INVALID_HANDLE;
      }
   };
 
