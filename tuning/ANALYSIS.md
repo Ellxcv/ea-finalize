@@ -82,6 +82,7 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | Trailing BE folder 19 | Original offset 100 | 44.44%* | 55.56%* | 82.61%* | 0.31 | 174.11% | -$7,863.97 | Reject; stop-out at 33% |
 | Trailing BE folder 20 | Original offset 50 | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Provisional accept |
 | Entry-context diagnostics folder 21 | Folder 20 + observation telemetry | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Accepted; no viable threshold |
+| Trend-freshness diagnostics folder 22 | Folder 21 + observation telemetry | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Accepted; no viable threshold |
 
 ## Daily consistency requirement
 
@@ -188,6 +189,19 @@ filter berubah arah, slope trend direction-normalized, perubahan state CCI dari 
 posisi dalam recent range, dan perubahan regime volatilitas. Kelompok pertama yang diukur adalah
 trend-freshness dan slope; tetap observation-only.
 
+Folder 22 juga mereproduksi control secara exact: preset sama, 5,381 report-history rows identik,
+594 context record valid, dan seluruh integrity counter nol. HiLo age memiliki median satu bar pada
+winner, L1-L3, dan L4+. SuperTrend MTF age memiliki median sembilan bar pada ketiga grup. EMA slope
+L4+ sedikit lebih positif daripada winner, berlawanan dengan hipotesis trend melemah.
+
+AUC keenam feature hanya 0.525-0.565. Dengan winner rejection dibatasi 10%, hasil terbaik adalah
+`EMASlope10ATR >= 0.985`, tetapi hanya menangkap 7 dari 53 L4+ (13.2%) sambil menolak 28 winner
+(9.9%). Tidak ada threshold tunggal atau kombinasi dua kondisi AND/OR yang memenuhi target pada
+Januari-Februari dan Maret-Mei. Trend-age dan EMA-slope guard tidak diteruskan.
+
+Diagnosis berikutnya memprioritaskan CCI progression dari candle signal ke entry. Recent-range
+position dan volatility regime tetap menjadi hipotesis setelah konteks CCI selesai diuji.
+
 ### 5. ADX directional bias reduces exposure, not the original-entry problem
 
 ADX M1/20 menurunkan original win rate menjadi 39.16% dan menaikkan recovery rate menjadi 60.42%.
@@ -284,7 +298,8 @@ Untuk setiap run, jawab:
 | 5 | Impulse beberapa bar memicu deep recovery | Tambahkan directional impulse + distance-from-mean telemetry | Temukan separator loser L4+ tanpa merusak coverage | Rejected; no separator |
 | 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50, 100, dan 200 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Offset 50 provisional; 100/200 rejected |
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
-| 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Implemented; folder 22 next |
+| 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected; no separator |
+| 9 | Momentum CCI berubah antara candle signal dan entry | Tambahkan CCI signal/entry value dan direction-normalized delta telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Next |
 
 ## Decision log
 
@@ -299,6 +314,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | Trailing BE folders 18–20 | Keep offset 50 as provisional candidate; reject 100/200 | Offset 50 raises original WR to 47.47% with similar net/DD; larger offsets stop out during February shock | Stop offset tuning; diagnose entry context of 53 L4+ cycles |
 | 2026-07-23 | Entry-context diagnostics folder 21 | Do not add impulse/EMA-distance entry guard | History reproduced exactly; no feature reaches the 20% L4+ / 10% winner screen and none survives the time split | Instrument trend freshness and slope next |
 | 2026-07-23 | Trend-freshness diagnostics implementation | Prepare folder 22 as observation-only | Log signed age for four trend filters and direction-normalized EMA slope without changing decisions | Reproduce folder 21, then screen L4+ separation |
+| 2026-07-23 | Trend-freshness diagnostics folder 22 | Do not add trend-age or EMA-slope guard | History reproduced exactly; no single or paired rule reaches the screen on both time splits | Instrument CCI progression from signal to entry |
 
 ## Compound readiness gate
 
