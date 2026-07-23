@@ -88,6 +88,12 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | Late-confirmation guard folder 25 | Symmetric exact mask-5 guard | 48.58% | 51.42% | 84.93% | 1.62 | 22.81% | $3,163.68 | Provisional accept |
 | Market-structure diagnostics folder 26 | Folder 25 + M1 pivot S/R telemetry | 48.58% | 51.42% | 84.93% | 1.62 | 22.81% | $3,163.68 | Accepted telemetry; reject M1 S/R guard |
 | M5 market-structure diagnostics folder 27 | Folder 26 with pivot S/R on M5 | 48.58% | 51.42% | 84.93% | 1.62 | 22.81% | $3,163.68 | Reject M5 and M1+M5 S/R guard |
+| Indicator ablation folder 28 | HiLo OFF, guard OFF | 47.76%* | 52.24%* | 83.71%* | 0.72 | 97.82% | -$3,823.28 | Reject; stop-out at 84% |
+| Indicator ablation folder 29 | PSAR OFF, guard OFF | 48.02% | 51.98% | 83.23% | 1.56 | 31.53% | $3,712.23 | Viable but no material depth gain |
+| Indicator ablation folder 30 | SuperTrend M1 OFF, guard OFF | 44.64%* | 55.36%* | 79.28%* | 0.66 | 105.40% | -$4,370.69 | Reject; stop-out at 42% |
+| Indicator ablation folder 31 | SuperTrend M5 OFF, guard OFF | 37.10%* | 62.90%* | N/A | 0.14 | 108.88% | -$4,384.10 | Reject; stop-out at 6% |
+
+`*` Periode parsial akibat stop-out; nilai tidak boleh dipakai sebagai full-period comparison.
 
 ## Daily consistency requirement
 
@@ -266,6 +272,28 @@ falling-knife BUY tanggal 2026-02-12 17:44. Recovery mencapai L10 dalam sekitar 
 kehilangan sekitar $4,387.23. Balance tersisa $196.36 sehingga report tidak menyelesaikan periode
 secara normal. ADX tuning dihentikan; smoothing tidak boleh dinonaktifkan pada kandidat ini.
 
+### 6. Single-filter ablation rejects removing the trend gates
+
+Folders 28–31 mematikan satu confirmation filter per run dengan late-confirmation guard OFF.
+HiLo OFF, SuperTrend M1 OFF, dan SuperTrend M5 OFF masing-masing berakhir stop-out. SuperTrend M5
+memberi kerusakan paling cepat: original WR hanya 37.10% dan akun berhenti pada 2026-01-12.
+SuperTrend M1 OFF berhenti pada 2026-02-23 dengan WR 44.64%, sedangkan HiLo OFF berhenti pada
+2026-04-14 meskipun WR parsial 47.76%.
+
+Ketiga final cycle berasal dari original SELL yang tidak ada pada control folder 24, lalu recovery
+bertambah sampai L10. Ini menunjukkan filter tersebut bukan sekadar duplikasi mekanis: masing-masing
+mencegah setidaknya satu setup yang fatal pada dataset ini.
+
+PSAR OFF adalah satu-satunya ablation yang menyelesaikan periode. Dibanding folder 24, WR naik
+47.47% menjadi 48.02%, recovery turun 52.53% menjadi 51.98%, PF naik 1.52 menjadi 1.56, dan net
+naik $3,427.74 menjadi $3,712.23. Namun L4+ absolut naik 53 menjadi 55, persentase recovery yang
+selesai maksimal L3 hanya naik 83.01% menjadi 83.23%, dan maximum depth tetap L10.
+
+Perbaikan PSAR OFF terlalu kecil dan tidak menargetkan recovery depth. Folder 25 dengan semua
+filter serta mask-5 guard tetap lebih sesuai objective: WR 48.58%, recovery 51.42%, L4+ 41,
+PF 1.62, dan equity DD 22.81%. Karena itu, pertahankan seluruh confirmation stack dan mask-5 guard;
+jangan hapus PSAR dari candidate saat ini.
+
 ## Baseline findings
 
 ### Recovery distribution
@@ -352,6 +380,8 @@ Untuk setiap run, jawab:
 | 11 | Salah satu trend filter baru mengonfirmasi setelah signal CCI | Log alignment HiLo, PSAR, ST M1, dan ST M5 pada signal-close versus entry | Identifikasi late confirmer yang terkonsentrasi pada L4+ dan stabil pada time split | Mask 5 candidate found |
 | 12 | HiLo+ST M1 simultaneous late flip menghasilkan chase entry | Block exact mask 5 secara simetris, default-off | WR naik, recovery dan L4+ turun, coverage/PF/net/DD terjaga | Implemented; folder 25 next |
 | 13 | Entry terlalu dekat structural S/R meningkatkan deep recovery | Log confirmed-pivot S/R M1/M5, room ATR, trend, swing, dan level age | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected on M1, M5, and combined |
+| 14 | Salah satu confirmation filter redundan dan dapat dihapus | Matikan HiLo, PSAR, ST M1, atau ST M5 satu per run dengan guard OFF | WR/recovery/L4+ membaik tanpa stop-out atau DD rusak | Rejected; PSAR OFF only marginal |
+| 15 | Initial SL berbasis volatilitas mengurangi original loss yang terlalu cepat | Tambahkan mode candle-anchored ATR 14 RMA × 1.4, default-off | WR/recovery membaik tanpa loss size, L4+, PF, atau DD memburuk | Next implementation |
 
 ## Decision log
 
@@ -375,6 +405,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | Late-confirmation guard folder 25 | Keep mask-5 guard as provisional candidate | WR, PF, L4+, and DD improve; net profit and average daily profit decline, so compound readiness is not established | Diagnose remaining 41 L4+ with market structure |
 | 2026-07-23 | Market-structure diagnostics folder 26 | Do not add an M1 S/R entry guard | Room, trend, swing, and level age overlap winner; no stable rule passes 20% L4+ / 10% winner screen | Run one M5 structure snapshot and combine it offline with folder 26 |
 | 2026-07-23 | M5 market-structure diagnostics folder 27 | Close S/R as an entry-guard hypothesis | M5 and every screened M1+M5 pair still fail the L4+ catch / winner-loss screen | Move to candle/volatility regime or session-transition diagnostics |
+| 2026-07-23 | Indicator ablation folders 28–31 | Keep all four confirmation filters | HiLo/ST M1/ST M5 OFF stop out; PSAR OFF gives only marginal aggregate gain and L4+ rises to 55 | Implement optional ATR initial SL without changing entry |
 
 ## Compound readiness gate
 
