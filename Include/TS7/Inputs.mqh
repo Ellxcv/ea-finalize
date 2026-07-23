@@ -29,6 +29,11 @@ input group "Original Trade Diagnostics"
 input bool   InpEnableOriginalTradeDiagnostics = false; // Log original-trade MFE/MAE without changing trading
 input int    InpOriginalDiagAtrPeriod  = 14;          // ATR period captured at original entry
 input int    InpOriginalDiagEmaPeriod  = 50;          // EMA period for entry distance telemetry
+input bool   InpEnableOriginalStructureDiagnostics = false; // Log confirmed-pivot S/R at original entry
+input ENUM_TIMEFRAMES InpOriginalStructureTimeframe = PERIOD_M1; // Explicit structure telemetry timeframe
+input int    InpOriginalStructureLeftBars = 10;       // Older bars required to form a pivot
+input int    InpOriginalStructureRightBars = 10;      // Closed newer bars required to confirm a pivot
+input int    InpOriginalStructureHistoryBars = 1500;  // Bars scanned for structure state
 
 input group "Late Confirmation Guard"
 input bool   InpEnableLateConfirmationGuard = false;  // Block symmetric HiLo+ST M1 late-confirm pattern

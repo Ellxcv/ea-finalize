@@ -116,6 +116,7 @@ int GetClassicRecoveryTrendDirection();
 #include "Include/TS7/Core/DailyManager.mqh"
 #include "Include/TS7/Core/PositionManager.mqh"
 #include "Include/TS7/Core/RiskManager.mqh"
+#include "Include/TS7/Diagnostics/MarketStructureDiagnostics.mqh"
 #include "Include/TS7/Diagnostics/OriginalTradeDiagnostics.mqh"
 #include "Include/TS7/Filters/LateConfirmationGuard.mqh"
 #include "Include/TS7/Core/OrderExecutor.mqh"
@@ -218,6 +219,8 @@ int OnInit()
    if(!ValidateRecoveryClassicSignalInputs())
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateRecoveryDistanceSignalInputs())
+      return(INIT_PARAMETERS_INCORRECT);
+   if(!ValidateOriginalStructureDiagnosticInputs())
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateLateConfirmationGuardInputs())
       return(INIT_PARAMETERS_INCORRECT);

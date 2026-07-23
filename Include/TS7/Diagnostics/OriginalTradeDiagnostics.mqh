@@ -56,6 +56,27 @@ struct SOriginalTradeDiagnostic
    int                lateConfirmMask;
    int                lateConfirmCount;
    bool               confirmationContextReady;
+   bool               structureCalculated;
+   ENUM_TIMEFRAMES    structureTimeframe;
+   int                structureTrend;
+   int                structureTrendAlign;
+   int                latestStructure;
+   datetime           latestStructureTime;
+   double             latestStructurePrice;
+   bool               hasSupport;
+   double             supportPrice;
+   int                supportType;
+   int                supportAgeBars;
+   bool               hasResistance;
+   double             resistancePrice;
+   int                resistanceType;
+   int                resistanceAgeBars;
+   double             supportDistanceAtr;
+   double             resistanceDistanceAtr;
+   bool               directionalRoomAvailable;
+   double             directionalRoomAtr;
+   bool               opposingLevelAhead;
+   bool               structureContextReady;
    double             mfePoints;
    double             maePoints;
    double             maxProfitMoney;
@@ -81,6 +102,10 @@ int    g_originalDiagContextErrors = 0;
 int    g_originalDiagTrendContextErrors = 0;
 int    g_originalDiagCciContextErrors = 0;
 int    g_originalDiagConfirmationContextErrors = 0;
+int    g_originalDiagStructureSnapshots = 0;
+int    g_originalDiagStructureEvaluationErrors = 0;
+int    g_originalDiagStructureNotReady = 0;
+int    g_originalDiagStructureMissingDirectionalLevel = 0;
 double g_originalDiagWinnerMfeTotal = 0.0;
 double g_originalDiagWinnerMaeTotal = 0.0;
 double g_originalDiagLoserMfeTotal = 0.0;
@@ -106,6 +131,10 @@ void ResetOriginalTradeDiagnostics()
    g_originalDiagTrendContextErrors = 0;
    g_originalDiagCciContextErrors = 0;
    g_originalDiagConfirmationContextErrors = 0;
+   g_originalDiagStructureSnapshots = 0;
+   g_originalDiagStructureEvaluationErrors = 0;
+   g_originalDiagStructureNotReady = 0;
+   g_originalDiagStructureMissingDirectionalLevel = 0;
    g_originalDiagWinnerMfeTotal = 0.0;
    g_originalDiagWinnerMaeTotal = 0.0;
    g_originalDiagLoserMfeTotal = 0.0;
@@ -434,6 +463,118 @@ void UpdateOriginalDiagnosticExcursion(const int index,
   }
 
 //+------------------------------------------------------------------+
+string OriginalStructurePriceText(const bool available,
+                                  const double price)
+  {
+   return available ? DoubleToString(price, _Digits) : "NA";
+  }
+
+//+------------------------------------------------------------------+
+string OriginalStructureAtrText(const bool available,
+                                const double value)
+  {
+   return available ? DoubleToString(value, 3) : "NA";
+  }
+
+//+------------------------------------------------------------------+
+string OriginalStructureTimeText(const datetime value)
+  {
+   return (value > 0)
+          ? TimeToString(value, TIME_DATE | TIME_MINUTES | TIME_SECONDS)
+          : "NA";
+  }
+
+//+------------------------------------------------------------------+
+void CaptureOriginalStructureDiagnostic(const int index,
+                                        const int direction,
+                                        const double atrPrice,
+                                        const long positionId)
+  {
+   g_originalDiagnostics[index].structureCalculated = false;
+   g_originalDiagnostics[index].structureTimeframe =
+      ResolveOriginalStructureTimeframe();
+   g_originalDiagnostics[index].structureTrend = 0;
+   g_originalDiagnostics[index].structureTrendAlign = 0;
+   g_originalDiagnostics[index].latestStructure = 0;
+   g_originalDiagnostics[index].latestStructureTime = 0;
+   g_originalDiagnostics[index].latestStructurePrice = EMPTY_VALUE;
+   g_originalDiagnostics[index].hasSupport = false;
+   g_originalDiagnostics[index].supportPrice = EMPTY_VALUE;
+   g_originalDiagnostics[index].supportType = 0;
+   g_originalDiagnostics[index].supportAgeBars = -1;
+   g_originalDiagnostics[index].hasResistance = false;
+   g_originalDiagnostics[index].resistancePrice = EMPTY_VALUE;
+   g_originalDiagnostics[index].resistanceType = 0;
+   g_originalDiagnostics[index].resistanceAgeBars = -1;
+   g_originalDiagnostics[index].supportDistanceAtr = 0.0;
+   g_originalDiagnostics[index].resistanceDistanceAtr = 0.0;
+   g_originalDiagnostics[index].directionalRoomAvailable = false;
+   g_originalDiagnostics[index].directionalRoomAtr = 0.0;
+   g_originalDiagnostics[index].opposingLevelAhead = false;
+   g_originalDiagnostics[index].structureContextReady = false;
+
+   if(!InpEnableOriginalStructureDiagnostics)
+      return;
+
+   STS7MarketStructureSnapshot snapshot;
+   if(!CalculateOriginalMarketStructure(snapshot))
+     {
+      g_originalDiagStructureEvaluationErrors++;
+      g_originalDiagStructureNotReady++;
+      Print("WARNING: [ORIGINAL_DIAG] Structure history not ready. PositionId=",
+            positionId,
+            " TF=", EnumToString(ResolveOriginalStructureTimeframe()));
+      return;
+     }
+
+   g_originalDiagStructureSnapshots++;
+   g_originalDiagnostics[index].structureCalculated = true;
+   g_originalDiagnostics[index].structureTimeframe = snapshot.timeframe;
+   g_originalDiagnostics[index].structureTrend = snapshot.trend;
+   g_originalDiagnostics[index].structureTrendAlign = direction * snapshot.trend;
+   g_originalDiagnostics[index].latestStructure = snapshot.latestStructure;
+   g_originalDiagnostics[index].latestStructureTime = snapshot.latestStructureTime;
+   g_originalDiagnostics[index].latestStructurePrice = snapshot.latestStructurePrice;
+   g_originalDiagnostics[index].hasSupport = snapshot.hasSupport;
+   g_originalDiagnostics[index].supportPrice = snapshot.support;
+   g_originalDiagnostics[index].supportType = snapshot.supportType;
+   g_originalDiagnostics[index].supportAgeBars = snapshot.supportAgeBars;
+   g_originalDiagnostics[index].hasResistance = snapshot.hasResistance;
+   g_originalDiagnostics[index].resistancePrice = snapshot.resistance;
+   g_originalDiagnostics[index].resistanceType = snapshot.resistanceType;
+   g_originalDiagnostics[index].resistanceAgeBars = snapshot.resistanceAgeBars;
+
+   bool atrReady = (atrPrice > 0.0 && MathIsValidNumber(atrPrice));
+   if(atrReady && snapshot.hasSupport)
+      g_originalDiagnostics[index].supportDistanceAtr =
+         (g_originalDiagnostics[index].entryPrice - snapshot.support) / atrPrice;
+   if(atrReady && snapshot.hasResistance)
+      g_originalDiagnostics[index].resistanceDistanceAtr =
+         (snapshot.resistance - g_originalDiagnostics[index].entryPrice) / atrPrice;
+
+   bool directionalLevelAvailable =
+      (direction > 0 ? snapshot.hasResistance : snapshot.hasSupport);
+   g_originalDiagnostics[index].directionalRoomAvailable =
+      atrReady && directionalLevelAvailable;
+   if(g_originalDiagnostics[index].directionalRoomAvailable)
+     {
+      g_originalDiagnostics[index].directionalRoomAtr =
+         (direction > 0
+          ? g_originalDiagnostics[index].resistanceDistanceAtr
+          : g_originalDiagnostics[index].supportDistanceAtr);
+      g_originalDiagnostics[index].opposingLevelAhead =
+         (g_originalDiagnostics[index].directionalRoomAtr >= 0.0);
+     }
+
+   g_originalDiagnostics[index].structureContextReady =
+      g_originalDiagnostics[index].directionalRoomAvailable;
+   if(!directionalLevelAvailable)
+      g_originalDiagStructureMissingDirectionalLevel++;
+   if(!g_originalDiagnostics[index].structureContextReady)
+      g_originalDiagStructureNotReady++;
+  }
+
+//+------------------------------------------------------------------+
 void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
                                                   const string dealComment)
   {
@@ -490,6 +631,7 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
    g_originalDiagnostics[index].entryEmaPrice = ReadOriginalDiagnosticEmaPrice();
 
    double atrPrice = g_originalDiagnostics[index].entryAtrPoints * _Point;
+   CaptureOriginalStructureDiagnostic(index, direction, atrPrice, positionId);
    double close1 = iClose(_Symbol, _Period, 1);
    double close4 = iClose(_Symbol, _Period, 4);
    double close6 = iClose(_Symbol, _Period, 6);
@@ -811,6 +953,64 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
       IntegerToString(g_originalDiagnostics[index].lateConfirmCount) +
       "|ConfirmationContextReady=" +
       (g_originalDiagnostics[index].confirmationContextReady ? "true" : "false");
+   string structureContextLog = "";
+   if(InpEnableOriginalStructureDiagnostics)
+     {
+      bool atrReady = (atrPrice > 0.0 && MathIsValidNumber(atrPrice));
+      structureContextLog =
+         "|StructureTF=" +
+         EnumToString(g_originalDiagnostics[index].structureTimeframe) +
+         "|StructureTrend=" +
+         IntegerToString(g_originalDiagnostics[index].structureTrend) +
+         "|StructureTrendAlign=" +
+         IntegerToString(g_originalDiagnostics[index].structureTrendAlign) +
+         "|LatestStructure=" +
+         OriginalStructureCodeText(g_originalDiagnostics[index].latestStructure) +
+         "|LatestStructureTime=" +
+         OriginalStructureTimeText(g_originalDiagnostics[index].latestStructureTime) +
+         "|LatestStructurePrice=" +
+         OriginalStructurePriceText(
+            g_originalDiagnostics[index].latestStructure != 0,
+            g_originalDiagnostics[index].latestStructurePrice) +
+         "|HasSupport=" +
+         (g_originalDiagnostics[index].hasSupport ? "true" : "false") +
+         "|Support=" +
+         OriginalStructurePriceText(g_originalDiagnostics[index].hasSupport,
+                                    g_originalDiagnostics[index].supportPrice) +
+         "|SupportType=" +
+         OriginalStructureCodeText(g_originalDiagnostics[index].supportType) +
+         "|SupportAgeBars=" +
+         IntegerToString(g_originalDiagnostics[index].supportAgeBars) +
+         "|HasResistance=" +
+         (g_originalDiagnostics[index].hasResistance ? "true" : "false") +
+         "|Resistance=" +
+         OriginalStructurePriceText(g_originalDiagnostics[index].hasResistance,
+                                    g_originalDiagnostics[index].resistancePrice) +
+         "|ResistanceType=" +
+         OriginalStructureCodeText(g_originalDiagnostics[index].resistanceType) +
+         "|ResistanceAgeBars=" +
+         IntegerToString(g_originalDiagnostics[index].resistanceAgeBars) +
+         "|SupportDistanceATR=" +
+         OriginalStructureAtrText(atrReady &&
+                                  g_originalDiagnostics[index].hasSupport,
+                                  g_originalDiagnostics[index].supportDistanceAtr) +
+         "|ResistanceDistanceATR=" +
+         OriginalStructureAtrText(atrReady &&
+                                  g_originalDiagnostics[index].hasResistance,
+                                  g_originalDiagnostics[index].resistanceDistanceAtr) +
+         "|DirectionalRoomATR=" +
+         OriginalStructureAtrText(
+            g_originalDiagnostics[index].directionalRoomAvailable,
+            g_originalDiagnostics[index].directionalRoomAtr) +
+         "|OpposingLevelAhead=" +
+         (g_originalDiagnostics[index].directionalRoomAvailable
+          ? (g_originalDiagnostics[index].opposingLevelAhead ? "true" : "false")
+          : "NA") +
+         "|StructureCalculated=" +
+         (g_originalDiagnostics[index].structureCalculated ? "true" : "false") +
+         "|StructureContextReady=" +
+         (g_originalDiagnostics[index].structureContextReady ? "true" : "false");
+     }
 
    Print("TS7_ORIGINAL_OPEN",
          "|PositionId=", positionId,
@@ -842,7 +1042,8 @@ void RegisterOriginalTradeDiagnosticFromEntryDeal(const ulong dealTicket,
          "|TrendContextReady=",
          (g_originalDiagnostics[index].trendContextReady ? "true" : "false"),
          cciContextLog,
-         confirmationContextLog);
+         confirmationContextLog,
+         structureContextLog);
 
    if(pendingMatches)
       CancelOriginalTradeDiagnostic();
@@ -999,7 +1200,12 @@ void PrintOriginalTradeDiagnosticsSummary()
          "|ContextErrors=", g_originalDiagContextErrors,
          "|TrendContextErrors=", g_originalDiagTrendContextErrors,
          "|CCIContextErrors=", g_originalDiagCciContextErrors,
-         "|ConfirmationContextErrors=", g_originalDiagConfirmationContextErrors);
+         "|ConfirmationContextErrors=", g_originalDiagConfirmationContextErrors,
+         "|StructureSnapshots=", g_originalDiagStructureSnapshots,
+         "|StructureEvaluationErrors=", g_originalDiagStructureEvaluationErrors,
+         "|StructureNotReady=", g_originalDiagStructureNotReady,
+         "|StructureMissingDirectionalLevel=",
+         g_originalDiagStructureMissingDirectionalLevel);
   }
 
 #endif // TS7_DIAGNOSTICS_ORIGINALTRADEDIAGNOSTICS_MQH
