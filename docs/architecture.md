@@ -27,6 +27,32 @@ berada pada lokasi standar MQL5/Indicators karena iCustom mencarinya saat runtim
 - Inputs.mqh: konfigurasi pengguna yang tampil pada properti EA.
 - GlobalState.mqh: state dan handle bersama yang dibutuhkan lintas modul.
 
+## Initial stop loss original strategy
+
+`Core/MainStopLoss.mqh` menghitung initial SL sebelum lot dan order original dibuat.
+`InpMainStopLossMode` menyediakan dua mode:
+
+- `MAIN_SL_FIXED_POINTS`: perilaku legacy, memakai `InpStopLossPoints`;
+- `MAIN_SL_ATR_CANDLE`: memakai high/low candle tertutup sebelumnya ditambah jarak ATR.
+
+Formula ATR candle:
+
+~~~text
+BUY SL  = previous closed candle low  - ATR(RMA) * multiplier
+SELL SL = previous closed candle high + ATR(RMA) * multiplier
+~~~
+
+ATR dihitung dari candle tertutup pada `InpMainStopAtrTimeframe`; candle berjalan tidak digunakan.
+Mode ATR bersifat fail-closed: entry tidak dikirim jika history belum siap, hasil perhitungan tidak
+valid, SL berada di sisi market yang salah, atau melanggar minimum stop distance broker. EA tidak
+fallback diam-diam ke fixed SL.
+
+`Core/RiskManager.mqh` menerima jarak initial SL aktual. Dengan demikian, mode lot dynamic memakai
+risiko ATR yang sebenarnya, sedangkan mode lot fixed tetap memakai `InpLotSize`. Log
+`TS7_MAIN_SL`, `TS7_MAIN_SL_BLOCK`, dan `TS7_MAIN_SL_SUMMARY` menyediakan telemetry untuk audit
+Strategy Tester. Initial SL hanya berlaku pada original order; trailing dan recovery tetap memakai
+aturan masing-masing.
+
 ## CCI signal selection
 
 `Signals/CCI.mqh` membaca empat buffer indikator: normal Buy/Sell dan StrongBuy/StrongSell.

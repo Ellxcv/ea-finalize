@@ -115,6 +115,7 @@ int GetClassicRecoveryTrendDirection();
 #include "Include/TS7/Filters/SessionFilter.mqh"
 #include "Include/TS7/Core/DailyManager.mqh"
 #include "Include/TS7/Core/PositionManager.mqh"
+#include "Include/TS7/Core/MainStopLoss.mqh"
 #include "Include/TS7/Core/RiskManager.mqh"
 #include "Include/TS7/Diagnostics/MarketStructureDiagnostics.mqh"
 #include "Include/TS7/Diagnostics/OriginalTradeDiagnostics.mqh"
@@ -204,6 +205,8 @@ int OnInit()
       Print("ERROR: InpMainRiskPercent must be > 0 when InpMainLotMode=MAIN_LOT_DYNAMIC.");
       return(INIT_PARAMETERS_INCORRECT);
      }
+   if(!ValidateMainStopLossInputs())
+      return(INIT_PARAMETERS_INCORRECT);
    if(InpTrailingBreakEvenOffsetPoints < 0)
      {
       Print("ERROR: InpTrailingBreakEvenOffsetPoints must be >= 0.");
@@ -249,6 +252,7 @@ int OnInit()
 
 //--- Record start of day equity
    RecordStartOfDayEquity();
+   ResetMainStopLossDiagnostics();
    ResetOriginalTradeDiagnostics();
    ResetLateConfirmationGuard();
 
@@ -266,6 +270,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
+   PrintMainStopLossSummary();
    PrintOriginalTradeDiagnosticsSummary();
    PrintLateConfirmationGuardSummary();
    DetachAccountStatusDashboard();

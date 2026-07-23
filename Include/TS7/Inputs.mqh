@@ -84,7 +84,11 @@ input int    InpNewYorkEndHour         = 23;         // New York end hour
 input int    InpNewYorkEndMinute       = 55;          // New York end minute
 
 input group "Risk Management"
+input ENUM_MAIN_STOP_LOSS_MODE InpMainStopLossMode = MAIN_SL_FIXED_POINTS; // Original initial SL mode
 input int    InpStopLossPoints         = 500;        // Stop Loss (points) = 50 pips
+input ENUM_TIMEFRAMES InpMainStopAtrTimeframe = PERIOD_CURRENT; // ATR candle timeframe
+input int    InpMainStopAtrPeriod      = 14;         // ATR RMA period
+input double InpMainStopAtrMultiplier  = 1.4;        // ATR distance beyond closed candle high/low
 input int    InpTakeProfitPoints       = 0;       // Take Profit (points) = 200 pips
 
 input group "Trailing Stop"
