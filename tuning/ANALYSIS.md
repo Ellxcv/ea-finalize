@@ -87,6 +87,7 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | Signal-confirmation diagnostics folder 24 | Folder 23 + signal-time alignment | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Accepted; mask-5 candidate |
 | Late-confirmation guard folder 25 | Symmetric exact mask-5 guard | 48.58% | 51.42% | 84.93% | 1.62 | 22.81% | $3,163.68 | Provisional accept |
 | Market-structure diagnostics folder 26 | Folder 25 + M1 pivot S/R telemetry | 48.58% | 51.42% | 84.93% | 1.62 | 22.81% | $3,163.68 | Accepted telemetry; reject M1 S/R guard |
+| M5 market-structure diagnostics folder 27 | Folder 26 with pivot S/R on M5 | 48.58% | 51.42% | 84.93% | 1.62 | 22.81% | $3,163.68 | Reject M5 and M1+M5 S/R guard |
 
 ## Daily consistency requirement
 
@@ -350,7 +351,7 @@ Untuk setiap run, jawab:
 | 10 | CCI reversal sudah overshoot sebelum entry | Guard `CI magnitude >=80 && directional CCI entry >=110` | L4+ turun; WR/recovery membaik tanpa merusak PF/DD/coverage | Paused; may mask late confirmation |
 | 11 | Salah satu trend filter baru mengonfirmasi setelah signal CCI | Log alignment HiLo, PSAR, ST M1, dan ST M5 pada signal-close versus entry | Identifikasi late confirmer yang terkonsentrasi pada L4+ dan stabil pada time split | Mask 5 candidate found |
 | 12 | HiLo+ST M1 simultaneous late flip menghasilkan chase entry | Block exact mask 5 secara simetris, default-off | WR naik, recovery dan L4+ turun, coverage/PF/net/DD terjaga | Implemented; folder 25 next |
-| 13 | Entry terlalu dekat structural S/R meningkatkan deep recovery | Log confirmed-pivot S/R M1, room ATR, trend, swing, dan level age | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | M1 rejected; test M5 once |
+| 13 | Entry terlalu dekat structural S/R meningkatkan deep recovery | Log confirmed-pivot S/R M1/M5, room ATR, trend, swing, dan level age | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected on M1, M5, and combined |
 
 ## Decision log
 
@@ -373,6 +374,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | Late-confirmation guard implementation | Prepare folder 25 | Apply exact mask 5 equally to BUY and SELL; leave CCI overshoot and recovery unchanged | Backtest against folder 24 control |
 | 2026-07-23 | Late-confirmation guard folder 25 | Keep mask-5 guard as provisional candidate | WR, PF, L4+, and DD improve; net profit and average daily profit decline, so compound readiness is not established | Diagnose remaining 41 L4+ with market structure |
 | 2026-07-23 | Market-structure diagnostics folder 26 | Do not add an M1 S/R entry guard | Room, trend, swing, and level age overlap winner; no stable rule passes 20% L4+ / 10% winner screen | Run one M5 structure snapshot and combine it offline with folder 26 |
+| 2026-07-23 | M5 market-structure diagnostics folder 27 | Close S/R as an entry-guard hypothesis | M5 and every screened M1+M5 pair still fail the L4+ catch / winner-loss screen | Move to candle/volatility regime or session-transition diagnostics |
 
 ## Compound readiness gate
 
