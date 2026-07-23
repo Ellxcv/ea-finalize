@@ -83,6 +83,7 @@ Tambahkan satu baris setelah sebuah run dianalisis.
 | Trailing BE folder 20 | Original offset 50 | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Provisional accept |
 | Entry-context diagnostics folder 21 | Folder 20 + observation telemetry | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Accepted; no viable threshold |
 | Trend-freshness diagnostics folder 22 | Folder 21 + observation telemetry | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Accepted; no viable threshold |
+| CCI-progression diagnostics folder 23 | Folder 22 + observation telemetry | 47.47% | 52.53% | 83.01% | 1.52 | 31.88% | $3,427.74 | Accepted; overshoot candidate |
 
 ## Daily consistency requirement
 
@@ -209,6 +210,20 @@ Januari-Februari dan Maret-Mei. Trend-age dan EMA-slope guard tidak diteruskan.
 Diagnosis berikutnya memprioritaskan CCI progression dari candle signal ke entry. Recent-range
 position dan volatility regime tetap menjadi hipotesis setelah konteks CCI selesai diuji.
 
+Folder 23 mereproduksi control secara exact dan seluruh 594 CCI context valid. Momentum cross
+masih bertahan pada 593 entry; satu cross yang hilang hanya mencapai recovery L1-L3. Dengan
+demikian, stale signal bukan berupa cross yang sudah berbalik.
+
+Pola berbeda muncul ketika smoothed CI masih ekstrem pada signal tetapi raw CCI sudah bergerak
+terlalu jauh ke arah posisi saat entry. Rule direction-normalized `-Direction × CISignal >= 80`
+dan `Direction × CCIEntry >= 110` menandai 12/53 L4+ (22.6%), 27/282 winner (9.6%), dan 25/259
+L1-L3 (9.7%). Rule tetap memenuhi screen pada Januari-Februari dan Maret-Mei.
+
+Separation terkonsentrasi pada BUY: 11/33 BUY L4+ versus 16/166 BUY winner ditandai. Pada SELL,
+hanya 1/20 L4+ versus 11/116 winner, sehingga symmetric rule membawa false rejection yang tidak
+produktif. Kandidat perlu diuji sebagai BUY_ONLY dan BOTH secara default-off. Threshold tidak boleh
+dituning lagi pada dataset ini, dan variant terpilih harus lolos out-of-sample.
+
 ### 5. ADX directional bias reduces exposure, not the original-entry problem
 
 ADX M1/20 menurunkan original win rate menjadi 39.16% dan menaikkan recovery rate menjadi 60.42%.
@@ -306,7 +321,8 @@ Untuk setiap run, jawab:
 | 6 | Trailing breakeven floor mencegah recovery dari loss kecil | Uji offset original 50, 100, dan 200 points | Recovery turun; net/PF/DD tidak rusak; L4+ absolut tidak naik | Offset 50 provisional; 100/200 rejected |
 | 7 | Risk control tidak membatasi deep recovery | Cap recovery diuji setelah entry membaik | Tidak ada stop-out; depth dan DD terkendali | Pending |
 | 8 | Deep recovery berasal dari trend alignment yang stale atau melemah | Tambahkan trend-age dan direction-normalized slope telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected; no separator |
-| 9 | Momentum CCI berubah antara candle signal dan entry | Tambahkan CCI signal/entry value dan direction-normalized delta telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Implemented; folder 23 next |
+| 9 | Momentum CCI berubah antara candle signal dan entry | Tambahkan CCI signal/entry value dan direction-normalized delta telemetry | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Candidate found |
+| 10 | CCI reversal sudah overshoot sebelum entry | Guard `CI magnitude >=80 && directional CCI entry >=110` | L4+ turun; WR/recovery membaik tanpa merusak PF/DD/coverage | Implement BUY_ONLY/BOTH |
 
 ## Decision log
 
@@ -323,6 +339,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | Trend-freshness diagnostics implementation | Prepare folder 22 as observation-only | Log signed age for four trend filters and direction-normalized EMA slope without changing decisions | Reproduce folder 21, then screen L4+ separation |
 | 2026-07-23 | Trend-freshness diagnostics folder 22 | Do not add trend-age or EMA-slope guard | History reproduced exactly; no single or paired rule reaches the screen on both time splits | Instrument CCI progression from signal to entry |
 | 2026-07-23 | CCI-progression diagnostics implementation | Prepare folder 23 as observation-only | Read raw CCI and smoothed CI from the same custom-indicator handle at signal and entry | Reproduce folder 22, then screen CCI persistence |
+| 2026-07-23 | CCI-progression diagnostics folder 23 | Test overshoot candidate; do not accept it yet | 80/110 pair meets total and time-split screen, but separation is BUY-heavy and threshold-sensitive | Implement default-off BUY_ONLY and BOTH variants |
 
 ## Compound readiness gate
 
