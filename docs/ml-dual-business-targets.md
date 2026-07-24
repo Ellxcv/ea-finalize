@@ -86,5 +86,30 @@ diubah menjadi filter yang memenuhi batas winner dan peningkatan bisnis.
 - Jangan membuka final OOS.
 - Jangan melakukan threshold tuning ulang pada evaluation fold yang sama.
 - Pertahankan pipeline sebagai reproducible challenger.
-- Eksperimen berikutnya memerlukan development data independen dan/atau feature dengan hipotesis
-  baru yang khusus menjelaskan kedalaman recovery, bukan indikator trend serupa.
+- Karena dataset berkualitas sudah maksimal, eksperimen berikutnya harus memakai data yang sama
+  secara konservatif dan hanya menambah feature dengan hipotesis baru.
+
+## Revisi zero-L4 dan conditional target
+
+Setelah prioritas bisnis diubah, winner rejection tidak lagi menjadi hard gate. Target sekunder
+sekarang hanya dilatih pada 453 recovery L1-L3 versus 101 recovery L4+, sehingga probability-nya
+diinterpretasikan sebagai `P(L4+ | recovery)`. Hard gate baru:
+
+- allowed L4+ harus nol;
+- candidate retained minimal 50%;
+- active-day coverage minimal 80%;
+- cycle-net proxy harus tetap non-negatif.
+
+Logistic Regression, shallow Random Forest, dan regularized XGBoost 3.3.0 dibandingkan dengan
+threshold validation-only. Hasil pooled future-fold:
+
+| Pair | NO_RECOVERY AUC | Conditional L4 AUC | Retained | Active days | Winner rejected | WR delta | Recovery reduction | Allowed L4+ | L4+ rejected |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Logistic | 0.6075 | 0.5041 | 52.02% | 94.79% | 42.29% | +5.95 pp | 13.39% | 35/62 | 43.55% |
+| Random Forest | 0.6220 | 0.5264 | 58.07% | 97.92% | 43.14% | -1.14 pp | -2.85% | 37/62 | 40.32% |
+| XGBoost | 0.6345 | 0.5529 | 52.64% | 96.88% | 39.71% | +7.89 pp | 17.66% | 28/62 | 54.84% |
+
+XGBoost menjadi development leader dan memperbaiki ranking kedua target, win rate, serta recovery
+reduction. Namun tidak satu pun validation fold menemukan threshold feasible dengan nol L4+ pada
+batas aktivitas yang ditetapkan. Evaluation XGBoost masih meloloskan 28 dari 62 L4+. Status tetap
+`REJECTED_NOT_FROZEN`: runtime EA tidak berubah dan final OOS tidak dibuka.

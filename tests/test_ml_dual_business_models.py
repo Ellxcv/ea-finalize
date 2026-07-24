@@ -22,7 +22,9 @@ SPEC.loader.exec_module(DUAL)
 
 def load_config() -> dict:
     return DUAL.baseline.read_config(
-        REPO_ROOT / "config" / "ml-phase3-dual-business-v2.json"
+        REPO_ROOT
+        / "config"
+        / "ml-phase3-dual-business-zero-l4-v3.json"
     )
 
 
@@ -65,14 +67,40 @@ class DualBusinessModelTests(unittest.TestCase):
         )
         self.assertTrue(config["dual_targets"]["l4_risk"]["balance_training"])
         self.assertEqual(
+            config["dual_targets"]["l4_risk"]["eligible_outcomes"],
+            ["RECOVERY_L1_L3", "RECOVERY_L4_PLUS"],
+        )
+        self.assertNotIn(
+            "winner_rejection_max", config["acceptance_gates"]
+        )
+        self.assertEqual(
+            config["acceptance_gates"]["allowed_l4_plus_max"], 0
+        )
+        self.assertIn("regularized_xgboost", config["models"])
+        self.assertEqual(
             config["dual_threshold_selection"]["objective_order"],
             [
+                "l4_plus_rejection_rate",
                 "relative_recovery_rate_reduction",
                 "original_win_rate_delta",
                 "relative_l4_given_recovery_reduction",
-                "l4_plus_rejection_rate",
             ],
         )
+
+    def test_l4_target_population_is_conditional_on_recovery(self) -> None:
+        rows = [
+            business_row(0, "NO_RECOVERY"),
+            business_row(1, "RECOVERY_L1_L3"),
+            business_row(2, "RECOVERY_L4_PLUS"),
+        ]
+        target = load_config()["dual_targets"]["l4_risk"]
+
+        indices = DUAL.target_population_indices(rows, target)
+        selected = DUAL.select_indices(rows, indices)
+        labels = DUAL.target_labels(selected, target)
+
+        self.assertEqual(indices, [1, 2])
+        self.assertEqual(labels, [0, 1])
 
     def test_class_balancing_is_deterministic_and_balanced(self) -> None:
         matrix = [[float(index)] for index in range(10)]
@@ -149,29 +177,25 @@ class DualBusinessModelTests(unittest.TestCase):
 
         self.assertTrue(selected["feasible"])
         metrics = selected["validation_business"]
-        self.assertLessEqual(metrics["winner_rejection_rate"], 0.1)
-        self.assertGreaterEqual(metrics["l4_plus_rejection_rate"], 0.2)
-        self.assertGreaterEqual(
-            metrics["relative_recovery_rate_reduction"], 0.1
-        )
+        self.assertEqual(metrics["allowed_l4_plus_count"], 0)
+        self.assertEqual(metrics["l4_plus_rejection_rate"], 1.0)
         self.assertLess(selected["l4_risk_threshold"], 0.9)
 
-    def test_gate_requires_conditional_deep_recovery_improvement(self) -> None:
+    def test_gate_requires_zero_l4_but_not_winner_limit(self) -> None:
         config = load_config()["acceptance_gates"]
         metrics = {
             "retained_fraction": 0.8,
-            "winner_rejection_rate": 0.05,
+            "winner_rejection_rate": 0.75,
             "active_day_retention": 0.9,
-            "original_win_rate_delta": 0.04,
-            "relative_recovery_rate_reduction": 0.12,
-            "l4_plus_rejection_rate": 0.25,
-            "relative_l4_given_recovery_reduction": 0.1,
+            "allowed_l4_plus_count": 0,
+            "allowed_cycle_net_sum_proxy": 1.0,
         }
 
         gates = DUAL.gate_results(metrics, config)
 
-        self.assertFalse(gates["relative_l4_given_recovery_reduction_min"])
-        self.assertFalse(gates["all"])
+        self.assertTrue(gates["all"])
+        metrics["allowed_l4_plus_count"] = 1
+        self.assertFalse(DUAL.gate_results(metrics, config)["all"])
 
     def test_small_experiment_is_deterministic(self) -> None:
         config = load_config()
@@ -191,6 +215,13 @@ class DualBusinessModelTests(unittest.TestCase):
                 "max_depth": 2,
                 "min_leaf": 5,
                 "max_thresholds": 4,
+            }
+        )
+        config["models"]["regularized_xgboost"].update(
+            {
+                "boost_rounds": 10,
+                "early_stopping_rounds": 3,
+                "min_child_weight": 1.0,
             }
         )
         config["calibration"]["max_iterations"] = 80

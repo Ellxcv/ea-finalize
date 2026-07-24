@@ -569,3 +569,9 @@ development folder 43-44 ditolak: signal no-recovery menjanjikan, tetapi L4-risk
 tidak ada fold yang lolos seluruh gate. Karena itu runtime tetap `ML_OFF` dan final OOS belum
 dibuka. Kontrak dan hasil lengkap ada di
 [ml-dual-business-targets.md](ml-dual-business-targets.md).
+
+Revisi berikutnya melatih L4 secara conditional pada recovery-only, menghapus winner rejection
+sebagai hard gate, menuntut nol allowed L4+, dan menambahkan regularized XGBoost. XGBoost menjadi
+leader dengan NO_RECOVERY AUC 0,6345, conditional L4 AUC 0,5529, recovery reduction 17,66%, dan
+original WR delta +7,89 pp. Akan tetapi 28 dari 62 L4+ evaluation masih lolos. Model tetap
+development-only; langkah berikutnya adalah feature schema v3 pada periode berkualitas yang sama.

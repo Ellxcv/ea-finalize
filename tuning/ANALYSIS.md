@@ -384,6 +384,7 @@ Untuk setiap run, jawab:
 | 15 | Initial SL berbasis volatilitas mengurangi original loss yang terlalu cepat | Tambahkan mode candle-anchored ATR 14 RMA × 1.4, default-off | WR/recovery membaik tanpa loss size, L4+, PF, atau DD memburuk | Inconclusive; folder 32 changed multiple groups |
 | 16 | Entry-state strength/distance menambah signal prediktif | Tambahkan 15 feature ADX/DI, CCI velocity, ATR, dan indicator geometry | Tolak >=20% L4+ dengan <=10% winner; WR/recovery membaik | Rejected; folders 43–44 only reach 11.29% L4+ |
 | 17 | Barrier label terlalu tidak langsung untuk tujuan bisnis | Challenger target NO_RECOVERY dan L4_PLUS dengan walk-forward validation-only threshold | WR +3 pp, recovery -10%, L4+ rejection >=20%, winner rejection <=10% per fold | Rejected; no fold passes all gates |
+| 18 | Conditional L4 target dan XGBoost dapat menghilangkan deep recovery walau winner rejection tinggi | Train L4+ hanya versus L1-L3; hard gate zero allowed L4+, retained 50%, active days 80% | Nol L4+ pada setiap fold dengan aktivitas terjaga | Rejected on v2 features; XGBoost still allows 28/62 L4+ |
 
 ## Decision log
 
@@ -413,6 +414,7 @@ Untuk setiap run, jawab:
 | 2026-07-24 | Entry-state v2 folders 43–44 | Do not freeze model or open final OOS | Audit passes 1,080 candidates, but AUC remains random; best L4+ rejection 11.29% and original WR/recovery do not improve | Review direct business-label challenger |
 
 | 2026-07-24 | Dual business-target challenger folders 43-44 | Reject both pairs; keep runtime ML_OFF and final OOS sealed | NO_RECOVERY AUC improves to 0.6075-0.6220, but L4-risk AUC is 0.4576-0.4959 and no fold passes all gates | Gather independent development data or a new depth-specific feature hypothesis |
+| 2026-07-24 | Conditional zero-L4 XGBoost challenger | Keep XGBoost as development leader but reject runtime promotion | AUC improves to 0.6345/0.5529 and recovery falls 17.66%, but 28/62 evaluation L4+ remain and no validation fold finds a feasible zero-L4 threshold | Add compact volatility, trend durability, momentum, and structure feature v3 using the same quality dataset |
 
 ## Compound readiness gate
 

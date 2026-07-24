@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import itertools
 import random
 import shutil
@@ -22,7 +23,7 @@ import train_baseline_models as baseline  # noqa: E402
 
 STATUS_REJECTED = "REJECTED_NOT_FROZEN"
 STATUS_PASSED = "DEVELOPMENT_GATE_PASSED_NOT_FROZEN"
-MANIFEST_VERSION = "ts7_ml_dual_business_manifest_v1"
+MANIFEST_VERSION = "ts7_ml_dual_business_manifest_v2"
 ALLOWED_BUSINESS_OUTCOMES = {
     "NO_RECOVERY",
     "RECOVERY_L1_L3",
@@ -87,6 +88,21 @@ def validate_config(config: Mapping[str, Any]) -> None:
             raise baseline.TrainingFailure(
                 f"Invalid positive outcomes for dual target {name}"
             )
+        eligible = target.get(
+            "eligible_outcomes", sorted(ALLOWED_BUSINESS_OUTCOMES)
+        )
+        if (
+            not isinstance(eligible, list)
+            or not eligible
+            or not set(eligible) <= ALLOWED_BUSINESS_OUTCOMES
+        ):
+            raise baseline.TrainingFailure(
+                f"Invalid eligible outcomes for dual target {name}"
+            )
+        if not set(positives) <= set(eligible):
+            raise baseline.TrainingFailure(
+                f"Positive outcomes must be eligible for dual target {name}"
+            )
         if not isinstance(target.get("balance_training"), bool):
             raise baseline.TrainingFailure(
                 f"balance_training must be boolean for {name}"
@@ -103,6 +119,14 @@ def validate_config(config: Mapping[str, Any]) -> None:
         raise baseline.TrainingFailure(
             "l4_risk target must use only RECOVERY_L4_PLUS as positive"
         )
+    if config["config_version"] == "ts7_ml_phase3_dual_business_zero_l4_v3":
+        if set(targets["l4_risk"].get("eligible_outcomes", [])) != {
+            "RECOVERY_L1_L3",
+            "RECOVERY_L4_PLUS",
+        }:
+            raise baseline.TrainingFailure(
+                "Zero-L4 v3 must train l4_risk conditionally on recovery outcomes"
+            )
 
     pairings = config["model_pairings"]
     if not isinstance(pairings, list) or not pairings:
@@ -125,14 +149,20 @@ def validate_config(config: Mapping[str, Any]) -> None:
         raise baseline.TrainingFailure(
             "max_candidates_per_target must be at least 2"
         )
-    for field in (
-        "minimum_retained_fraction",
-        "winner_rejection_max",
-        "active_day_retention_min",
-    ):
+    for field in ("minimum_retained_fraction", "active_day_retention_min"):
         value = float(selection[field])
         if not 0.0 <= value <= 1.0:
             raise baseline.TrainingFailure(f"{field} must be between 0 and 1")
+    if "winner_rejection_max" in selection:
+        value = float(selection["winner_rejection_max"])
+        if not 0.0 <= value <= 1.0:
+            raise baseline.TrainingFailure(
+                "winner_rejection_max must be between 0 and 1"
+            )
+    if int(selection.get("allowed_l4_plus_max", 0)) < 0:
+        raise baseline.TrainingFailure(
+            "allowed_l4_plus_max cannot be negative"
+        )
     objective_order = selection.get("objective_order")
     allowed_objectives = {
         "relative_recovery_rate_reduction",
@@ -150,18 +180,27 @@ def validate_config(config: Mapping[str, Any]) -> None:
         )
 
     gates = config["acceptance_gates"]
+    for field in ("minimum_retained_fraction", "active_day_retention_min"):
+        value = float(gates[field])
+        if not 0.0 <= value <= 1.0:
+            raise baseline.TrainingFailure(f"{field} must be between 0 and 1")
     for field in (
-        "minimum_retained_fraction",
         "winner_rejection_max",
-        "active_day_retention_min",
         "original_win_rate_delta_min",
         "relative_recovery_rate_reduction_min",
         "l4_plus_rejection_min",
         "relative_l4_given_recovery_reduction_min",
     ):
-        value = float(gates[field])
-        if not 0.0 <= value <= 1.0:
-            raise baseline.TrainingFailure(f"{field} must be between 0 and 1")
+        if field in gates:
+            value = float(gates[field])
+            if not 0.0 <= value <= 1.0:
+                raise baseline.TrainingFailure(
+                    f"{field} must be between 0 and 1"
+                )
+    if int(gates.get("allowed_l4_plus_max", 0)) < 0:
+        raise baseline.TrainingFailure(
+            "allowed_l4_plus_max cannot be negative"
+        )
 
 
 def read_dataset(
@@ -183,6 +222,28 @@ def target_labels(
 ) -> list[int]:
     positives = set(target_config["positive_outcomes"])
     return [1 if row["BusinessOutcome"] in positives else 0 for row in rows]
+
+
+def target_population_indices(
+    rows: Sequence[Mapping[str, str]],
+    target_config: Mapping[str, Any],
+) -> list[int]:
+    eligible = set(
+        target_config.get(
+            "eligible_outcomes", sorted(ALLOWED_BUSINESS_OUTCOMES)
+        )
+    )
+    return [
+        index
+        for index, row in enumerate(rows)
+        if row["BusinessOutcome"] in eligible
+    ]
+
+
+def select_indices(
+    values: Sequence[Any], indices: Sequence[int]
+) -> list[Any]:
+    return [values[index] for index in indices]
 
 
 def balance_training_data(
@@ -237,6 +298,127 @@ def balance_training_data(
             },
         },
     )
+
+
+def require_xgboost() -> Any:
+    try:
+        import xgboost  # type: ignore[import-not-found]
+    except ModuleNotFoundError as exc:
+        raise baseline.TrainingFailure(
+            "regularized_xgboost requires tools/ml/requirements.txt; "
+            "run: python -m pip install -r tools/ml/requirements.txt"
+        ) from exc
+    return xgboost
+
+
+def fit_regularized_xgboost(
+    train_matrix: Sequence[Sequence[float]],
+    train_labels: Sequence[int],
+    validation_matrix: Sequence[Sequence[float]],
+    validation_labels: Sequence[int],
+    config: Mapping[str, Any],
+    fold_number: int,
+) -> dict[str, Any]:
+    if len(set(train_labels)) != 2 or len(set(validation_labels)) != 2:
+        raise baseline.TrainingFailure(
+            "XGBoost requires both classes in train and validation"
+        )
+    xgboost = require_xgboost()
+    training = xgboost.DMatrix(train_matrix, label=train_labels)
+    validation = xgboost.DMatrix(
+        validation_matrix, label=validation_labels
+    )
+    seed = int(config["seed"]) + fold_number
+    parameters = {
+        "objective": "binary:logistic",
+        "eval_metric": "logloss",
+        "tree_method": "hist",
+        "max_depth": int(config["max_depth"]),
+        "eta": float(config["learning_rate"]),
+        "min_child_weight": float(config["min_child_weight"]),
+        "subsample": float(config["subsample"]),
+        "colsample_bytree": float(config["colsample_bytree"]),
+        "alpha": float(config["reg_alpha"]),
+        "lambda": float(config["reg_lambda"]),
+        "gamma": float(config["gamma"]),
+        "seed": seed,
+        "nthread": int(config["threads"]),
+        "verbosity": 0,
+    }
+    booster = xgboost.train(
+        parameters,
+        training,
+        num_boost_round=int(config["boost_rounds"]),
+        evals=[(validation, "validation")],
+        early_stopping_rounds=int(config["early_stopping_rounds"]),
+        verbose_eval=False,
+    )
+    best_iteration = int(booster.best_iteration)
+    serialized = base64.b64encode(
+        bytes(booster.save_raw(raw_format="ubj"))
+    ).decode("ascii")
+    return {
+        "type": "regularized_xgboost",
+        "version": str(xgboost.__version__),
+        "seed": seed,
+        "best_iteration": best_iteration,
+        "best_score": float(booster.best_score),
+        "parameters": parameters,
+        "serialized_ubj_base64": serialized,
+        "_booster": booster,
+    }
+
+
+def train_target_model(
+    name: str,
+    train_matrix: Sequence[Sequence[float]],
+    train_labels: Sequence[int],
+    validation_matrix: Sequence[Sequence[float]],
+    validation_labels: Sequence[int],
+    config: Mapping[str, Any],
+    fold_number: int,
+) -> dict[str, Any]:
+    if name == "regularized_xgboost":
+        return fit_regularized_xgboost(
+            train_matrix,
+            train_labels,
+            validation_matrix,
+            validation_labels,
+            config,
+            fold_number,
+        )
+    return baseline.train_model(
+        name, train_matrix, train_labels, config, fold_number
+    )
+
+
+def predict_target_model(
+    name: str,
+    model: Mapping[str, Any],
+    matrix: Sequence[Sequence[float]],
+) -> list[float]:
+    if name != "regularized_xgboost":
+        return baseline.predict_model(name, model, matrix)
+    xgboost = require_xgboost()
+    booster = model.get("_booster")
+    if booster is None:
+        raise baseline.TrainingFailure(
+            "In-memory XGBoost booster is unavailable"
+        )
+    best_iteration = int(model["best_iteration"])
+    predictions = booster.predict(
+        xgboost.DMatrix(matrix),
+        iteration_range=(0, best_iteration + 1),
+    )
+    return [float(value) for value in predictions]
+
+
+def serializable_model(model: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in model.items()
+        if key != "_booster"
+    }
 
 
 def threshold_candidates(
@@ -339,6 +521,9 @@ def business_metrics(
             sum(is_deep and not decision for is_deep, decision in zip(deep, decisions)),
             sum(deep),
         ),
+        "baseline_l4_plus_count": sum(deep),
+        "allowed_l4_plus_count": allowed_l4_count,
+        "rejected_l4_plus_count": sum(deep) - allowed_l4_count,
         "baseline_original_win_rate": baseline_win_rate,
         "allowed_original_win_rate": allowed_win_rate,
         "original_win_rate_delta": win_rate_delta,
@@ -381,31 +566,38 @@ def gate_results(
         value = metrics.get(field)
         return value is not None and float(value) <= float(gates[target]) + 1e-12
 
-    results = {
+    results: dict[str, bool] = {
         "minimum_retained_fraction": at_least(
             "retained_fraction", "minimum_retained_fraction"
-        ),
-        "winner_rejection_max": at_most(
-            "winner_rejection_rate", "winner_rejection_max"
         ),
         "active_day_retention_min": at_least(
             "active_day_retention", "active_day_retention_min"
         ),
-        "original_win_rate_delta_min": at_least(
-            "original_win_rate_delta", "original_win_rate_delta_min"
+    }
+    optional_minimums = {
+        "original_win_rate_delta_min": "original_win_rate_delta",
+        "relative_recovery_rate_reduction_min": (
+            "relative_recovery_rate_reduction"
         ),
-        "relative_recovery_rate_reduction_min": at_least(
-            "relative_recovery_rate_reduction",
-            "relative_recovery_rate_reduction_min",
+        "l4_plus_rejection_min": "l4_plus_rejection_rate",
+        "relative_l4_given_recovery_reduction_min": (
+            "relative_l4_given_recovery_reduction"
         ),
-        "l4_plus_rejection_min": at_least(
-            "l4_plus_rejection_rate", "l4_plus_rejection_min"
-        ),
-        "relative_l4_given_recovery_reduction_min": at_least(
-            "relative_l4_given_recovery_reduction",
-            "relative_l4_given_recovery_reduction_min",
+        "allowed_cycle_net_sum_proxy_min": (
+            "allowed_cycle_net_sum_proxy"
         ),
     }
+    for gate, metric in optional_minimums.items():
+        if gate in gates:
+            results[gate] = at_least(metric, gate)
+    if "winner_rejection_max" in gates:
+        results["winner_rejection_max"] = at_most(
+            "winner_rejection_rate", "winner_rejection_max"
+        )
+    if "allowed_l4_plus_max" in gates:
+        results["allowed_l4_plus_max"] = at_most(
+            "allowed_l4_plus_count", "allowed_l4_plus_max"
+        )
     results["all"] = all(results.values())
     return results
 
@@ -427,6 +619,8 @@ def normalized_gate_progress(
     )
     progress = []
     for metric, target in fields:
+        if target not in gates:
+            continue
         value = metrics.get(metric)
         denominator = float(gates[target])
         progress.append(
@@ -471,17 +665,35 @@ def choose_dual_thresholds(
         )
         metrics = business_metrics(rows, decisions)
         retained = float(metrics["retained_fraction"] or 0.0)
-        winner_rejection = metrics["winner_rejection_rate"]
         active_days = float(metrics["active_day_retention"] or 0.0)
-        feasible = (
+        viable = (
             retained + 1e-12
             >= float(selection_config["minimum_retained_fraction"])
-            and winner_rejection is not None
-            and float(winner_rejection)
-            <= float(selection_config["winner_rejection_max"]) + 1e-12
             and active_days + 1e-12
             >= float(selection_config["active_day_retention_min"])
         )
+        if "winner_rejection_max" in selection_config:
+            winner_rejection = metrics["winner_rejection_rate"]
+            viable = (
+                viable
+                and winner_rejection is not None
+                and float(winner_rejection)
+                <= float(selection_config["winner_rejection_max"]) + 1e-12
+            )
+        zero_l4 = (
+            int(metrics["allowed_l4_plus_count"])
+            <= int(selection_config.get("allowed_l4_plus_max", 10**9))
+        )
+        net_viable = (
+            float(metrics["allowed_cycle_net_sum_proxy"])
+            + 1e-12
+            >= float(
+                selection_config.get(
+                    "allowed_cycle_net_sum_proxy_min", float("-inf")
+                )
+            )
+        )
+        feasible = viable and zero_l4 and net_viable
         objective = (
             *(
                 numeric_metric(metrics, field)
@@ -497,7 +709,11 @@ def choose_dual_thresholds(
                 metrics,
             )
         fallback_objective = (
-            -float(winner_rejection if winner_rejection is not None else 1.0),
+            1.0 if viable and net_viable else 0.0,
+            -float(metrics["allowed_l4_plus_count"]),
+            numeric_metric(metrics, "l4_plus_rejection_rate"),
+            numeric_metric(metrics, "relative_recovery_rate_reduction"),
+            numeric_metric(metrics, "original_win_rate_delta"),
             active_days,
             retained,
         )
@@ -592,14 +808,15 @@ def pairing_rank(
 ) -> tuple[float, ...]:
     metrics = summary["business"]
     results = summary["aggregate_gates"]
-    progress = normalized_gate_progress(metrics, gates)
     return (
-        float(sum(value for name, value in results.items() if name != "all")),
         float(summary["all_evaluation_folds_pass"]),
-        min(progress),
-        sum(progress),
-        numeric_metric(metrics, "relative_recovery_rate_reduction"),
+        float(sum(value for name, value in results.items() if name != "all")),
+        -numeric_metric(metrics, "allowed_l4_plus_count", float("inf")),
         numeric_metric(metrics, "l4_plus_rejection_rate"),
+        numeric_metric(metrics, "relative_recovery_rate_reduction"),
+        numeric_metric(metrics, "original_win_rate_delta"),
+        numeric_metric(metrics, "active_day_retention"),
+        numeric_metric(metrics, "retained_fraction"),
         -numeric_metric(metrics, "winner_rejection_rate", 1.0),
     )
 
@@ -615,14 +832,14 @@ def render_report(report: Mapping[str, Any]) -> str:
         f"- Development leader: `{report['development_leader']}`",
         "",
         "Entry diizinkan hanya bila P(NO_RECOVERY) >= threshold A dan "
-        "P(L4_PLUS) <= threshold B.",
+        "P(L4_PLUS | recovery) <= threshold B.",
         "",
         "## Aggregate future-fold evaluation",
         "",
         "| Pairing | No-recovery AUC | L4-risk AUC | Retained | Winner rejected "
-        "| Original WR delta | Recovery reduction | L4+ rejected "
+        "| Original WR delta | Recovery reduction | Allowed L4+ | L4+ rejected "
         "| L4/recovery reduction | All folds pass |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for name, summary in report["pairings"].items():
         business = summary["business"]
@@ -641,6 +858,7 @@ def render_report(report: Mapping[str, Any]) -> str:
             f"| {percent(business['winner_rejection_rate'])} "
             f"| {percent(business['original_win_rate_delta'])} "
             f"| {percent(business['relative_recovery_rate_reduction'])} "
+            f"| {business['allowed_l4_plus_count']} "
             f"| {percent(business['l4_plus_rejection_rate'])} "
             f"| {percent(business['relative_l4_given_recovery_reduction'])} "
             f"| {summary['all_evaluation_folds_pass']} |"
@@ -651,8 +869,9 @@ def render_report(report: Mapping[str, Any]) -> str:
             "## Evaluation gates by fold",
             "",
             "| Fold | Pairing | Retained | Winner rejected | Original WR delta "
-            "| Recovery reduction | L4+ rejected | L4/recovery reduction | Pass |",
-            "| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+            "| Recovery reduction | Allowed L4+ | L4+ rejected "
+            "| L4/recovery reduction | Pass |",
+            "| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
         ]
     )
     for row in report["evaluation_fold_results"]:
@@ -667,6 +886,7 @@ def render_report(report: Mapping[str, Any]) -> str:
             f"| {percent(metrics['winner_rejection_rate'])} "
             f"| {percent(metrics['original_win_rate_delta'])} "
             f"| {percent(metrics['relative_recovery_rate_reduction'])} "
+            f"| {metrics['allowed_l4_plus_count']} "
             f"| {percent(metrics['l4_plus_rejection_rate'])} "
             f"| {percent(metrics['relative_l4_given_recovery_reduction'])} "
             f"| {row['gates']['all']} |"
@@ -676,6 +896,7 @@ def render_report(report: Mapping[str, Any]) -> str:
             "",
             "## Boundary",
             "",
+            "- Target L4+ hanya dilatih pada recovery L1-L3 versus L4+.",
             "- Class balancing hanya dilakukan pada training partition target L4+.",
             "- Calibration dan threshold selection memakai validation asli.",
             "- Evaluation tidak digunakan untuk fit, calibration, atau threshold selection.",
@@ -719,11 +940,23 @@ def run_experiment(
             name: [preprocessor.transform(row) for row in partition]
             for name, partition in partitions.items()
         }
-        labels = {
+        target_views = {
             target_name: {
-                partition_name: target_labels(
-                    partition, config["dual_targets"][target_name]
-                )
+                partition_name: {
+                    "indices": (
+                        indices := target_population_indices(
+                            partition,
+                            config["dual_targets"][target_name],
+                        )
+                    ),
+                    "matrix": select_indices(
+                        matrices[partition_name], indices
+                    ),
+                    "labels": target_labels(
+                        select_indices(partition, indices),
+                        config["dual_targets"][target_name],
+                    ),
+                }
                 for partition_name, partition in partitions.items()
             }
             for target_name in TARGET_NAMES
@@ -742,13 +975,14 @@ def run_experiment(
                 "target_counts": {
                     target_name: {
                         partition_name: {
-                            "positive": sum(partition_labels),
-                            "negative": len(partition_labels)
-                            - sum(partition_labels),
+                            "eligible": len(view["labels"]),
+                            "positive": sum(view["labels"]),
+                            "negative": len(view["labels"])
+                            - sum(view["labels"]),
                         }
-                        for partition_name, partition_labels in target_partitions.items()
+                        for partition_name, view in target_partitions.items()
                     }
-                    for target_name, target_partitions in labels.items()
+                    for target_name, target_partitions in target_views.items()
                 },
             }
         )
@@ -758,36 +992,43 @@ def run_experiment(
         }
         for target_index, target_name in enumerate(TARGET_NAMES):
             target_config = config["dual_targets"][target_name]
+            train_view = target_views[target_name]["train"]
+            validation_view = target_views[target_name]["validation"]
+            evaluation_view = target_views[target_name]["evaluation"]
             balanced_matrix, balanced_labels, balance_metadata = (
                 balance_training_data(
-                    matrices["train"],
-                    labels[target_name]["train"],
+                    train_view["matrix"],
+                    train_view["labels"],
                     bool(target_config["balance_training"]),
                     int(target_config["balance_seed"]) + fold.number,
                 )
             )
-            if len(set(labels[target_name]["validation"])) != 2:
+            if len(set(validation_view["labels"])) != 2:
                 raise baseline.TrainingFailure(
                     f"Fold {fold.number} validation lacks both {target_name} classes"
                 )
-            if len(set(labels[target_name]["evaluation"])) != 2:
+            if len(set(evaluation_view["labels"])) != 2:
                 raise baseline.TrainingFailure(
                     f"Fold {fold.number} evaluation lacks both {target_name} classes"
                 )
             for model_name, model_config in config["models"].items():
-                model = baseline.train_model(
+                model = train_target_model(
                     model_name,
                     balanced_matrix,
                     balanced_labels,
+                    validation_view["matrix"],
+                    validation_view["labels"],
                     model_config,
                     fold.number + target_index * 100,
                 )
-                raw_validation = baseline.predict_model(
+                raw_validation = predict_target_model(
                     model_name, model, matrices["validation"]
                 )
                 calibrator = baseline.fit_platt_calibrator(
-                    raw_validation,
-                    labels[target_name]["validation"],
+                    select_indices(
+                        raw_validation, validation_view["indices"]
+                    ),
+                    validation_view["labels"],
                     config["calibration"],
                 )
                 trained[target_name][model_name] = {
@@ -798,7 +1039,7 @@ def run_experiment(
                     "validation": baseline.apply_calibrator(
                         calibrator, raw_validation
                     ),
-                    "raw_evaluation": baseline.predict_model(
+                    "raw_evaluation": predict_target_model(
                         model_name, model, matrices["evaluation"]
                     ),
                 }
@@ -857,6 +1098,7 @@ def run_experiment(
                     )
                 )
                 for target_name in TARGET_NAMES:
+                    target_view = target_views[target_name][partition_name]
                     target_metric_rows.append(
                         target_metric_row(
                             fold.number,
@@ -864,8 +1106,11 @@ def run_experiment(
                             partition_name,
                             target_name,
                             algorithms[target_name],
-                            labels[target_name][partition_name],
-                            target_outputs[target_name][partition_name],
+                            target_view["labels"],
+                            select_indices(
+                                target_outputs[target_name][partition_name],
+                                target_view["indices"],
+                            ),
                         )
                     )
             evaluation_fold_results.append(
@@ -932,8 +1177,16 @@ def run_experiment(
                         "positive_outcomes": config["dual_targets"][target_name][
                             "positive_outcomes"
                         ],
+                        "eligible_outcomes": config["dual_targets"][
+                            target_name
+                        ].get(
+                            "eligible_outcomes",
+                            sorted(ALLOWED_BUSINESS_OUTCOMES),
+                        ),
                         "balance": target_outputs[target_name]["balance"],
-                        "model": target_outputs[target_name]["model"],
+                        "model": serializable_model(
+                            target_outputs[target_name]["model"]
+                        ),
                         "calibrator": target_outputs[target_name]["calibrator"],
                     }
                     for target_name in TARGET_NAMES
@@ -975,10 +1228,17 @@ def run_experiment(
             ("l4_risk", "L4RiskProbability"),
         ):
             target_config = config["dual_targets"][target_name]
-            labels_for_target = target_labels(proxy_rows, target_config)
-            probabilities = [
+            indices = target_population_indices(
+                proxy_rows, target_config
+            )
+            target_rows = select_indices(proxy_rows, indices)
+            labels_for_target = target_labels(
+                target_rows, target_config
+            )
+            probabilities_all = [
                 float(row[probability_field]) for row in predictions
             ]
+            probabilities = select_indices(probabilities_all, indices)
             target_metrics[target_name] = baseline.binary_metrics(
                 labels_for_target, probabilities, 0.5
             )
@@ -1110,7 +1370,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=repo_root / "config" / "ml-phase3-dual-business-v2.json",
+        default=(
+            repo_root
+            / "config"
+            / "ml-phase3-dual-business-zero-l4-v3.json"
+        ),
     )
     parser.add_argument("--replace-output", action="store_true")
     return parser.parse_args(argv)

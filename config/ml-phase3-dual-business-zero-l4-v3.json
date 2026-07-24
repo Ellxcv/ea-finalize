@@ -1,0 +1,81 @@
+{
+  "extends": "ml-phase3-baseline-v2.json",
+  "config_version": "ts7_ml_phase3_dual_business_zero_l4_v3",
+  "dual_targets": {
+    "no_recovery": {
+      "positive_outcomes": [
+        "NO_RECOVERY"
+      ],
+      "eligible_outcomes": [
+        "NO_RECOVERY",
+        "RECOVERY_L1_L3",
+        "RECOVERY_L4_PLUS"
+      ],
+      "balance_training": false,
+      "balance_seed": 240701
+    },
+    "l4_risk": {
+      "positive_outcomes": [
+        "RECOVERY_L4_PLUS"
+      ],
+      "eligible_outcomes": [
+        "RECOVERY_L1_L3",
+        "RECOVERY_L4_PLUS"
+      ],
+      "balance_training": true,
+      "balance_seed": 240702
+    }
+  },
+  "models": {
+    "regularized_xgboost": {
+      "max_depth": 2,
+      "learning_rate": 0.03,
+      "boost_rounds": 240,
+      "early_stopping_rounds": 25,
+      "min_child_weight": 12.0,
+      "subsample": 0.8,
+      "colsample_bytree": 0.7,
+      "reg_alpha": 0.5,
+      "reg_lambda": 5.0,
+      "gamma": 0.1,
+      "seed": 140403,
+      "threads": 1
+    }
+  },
+  "model_pairings": [
+    {
+      "name": "logistic_pair",
+      "no_recovery_model": "logistic_regression",
+      "l4_risk_model": "logistic_regression"
+    },
+    {
+      "name": "forest_pair",
+      "no_recovery_model": "shallow_random_forest",
+      "l4_risk_model": "shallow_random_forest"
+    },
+    {
+      "name": "xgboost_pair",
+      "no_recovery_model": "regularized_xgboost",
+      "l4_risk_model": "regularized_xgboost"
+    }
+  ],
+  "dual_threshold_selection": {
+    "max_candidates_per_target": 64,
+    "minimum_retained_fraction": 0.5,
+    "active_day_retention_min": 0.8,
+    "allowed_l4_plus_max": 0,
+    "allowed_cycle_net_sum_proxy_min": 0.0,
+    "objective_order": [
+      "l4_plus_rejection_rate",
+      "relative_recovery_rate_reduction",
+      "original_win_rate_delta",
+      "relative_l4_given_recovery_reduction"
+    ]
+  },
+  "acceptance_gates": {
+    "minimum_retained_fraction": 0.5,
+    "active_day_retention_min": 0.8,
+    "allowed_l4_plus_max": 0,
+    "allowed_cycle_net_sum_proxy_min": 0.0
+  }
+}
