@@ -70,6 +70,12 @@ int      g_recoveryLossDirection = 0;    // +1 loss BUY, -1 loss SELL
 bool     g_recoveryBuyDone      = false;
 bool     g_recoverySellDone     = false;
 bool     g_closingRecoveryPositions = false; // Guard: prevent re-trigger during close
+bool     g_recoveryHardAbortPending = false; // GRID hard-abort cleanup remains active until exposure is cleared
+int      g_recoveryHardAbortLevel   = 0;     // Triggered level that must not be opened
+double   g_recoveryHardAbortTriggerPrice = 0.0;
+double   g_recoveryHardAbortBasketPL = 0.0;  // Recovery-only basket P/L snapshot at trigger
+int      g_recoveryHardAbortCount   = 0;     // Persistent run telemetry
+double   g_recoveryHardAbortTotalBasketPL = 0.0;
 int      g_recoveryStepCount    = 0;         // Recovery entry counter
 bool     g_recoveryZoneBreached = false;     // Zone sudah pernah ditembus (trend mode)
 double   g_recoveryGridAnchorPrice = 0.0;    // GRID anchor (loss close or trend signal close)
@@ -99,6 +105,7 @@ bool IsRecoveryComment(const string comment);
 bool DeleteRecoveryPendingOrders();
 void DeleteRecoveryLines();
 void ResetRecoveryState(const string completionReason = "RESET");
+bool ContinueRecoveryHardAbortCleanup();
 int GetRecoveryTrendDirection();
 int GetClassicRecoveryTrendDirection();
 
@@ -192,6 +199,53 @@ bool ValidateRecoveryDistanceSignalInputs()
   }
 
 //+------------------------------------------------------------------+
+//| Validate GRID hard-abort risk control                            |
+//+------------------------------------------------------------------+
+bool ValidateRecoveryHardAbortInputs()
+  {
+   if(InpRecoveryAbortBeforeLevel < 0 ||
+      InpRecoveryAbortBeforeLevel == 1)
+     {
+      Print("ERROR: InpRecoveryAbortBeforeLevel must be 0 (off) or >= 2.");
+      return false;
+     }
+
+   if(InpRecoveryAbortBeforeLevel == 0 || !InpEnableRecovery)
+      return true;
+
+   if(InpRecoveryMode != RECOVERY_MODE_GRID)
+     {
+      Print("WARNING: InpRecoveryAbortBeforeLevel is enabled but applies only to RECOVERY_MODE_GRID.");
+      return true;
+     }
+
+   if(InpRecoveryGridMaxLevels < InpRecoveryAbortBeforeLevel)
+     {
+      Print("ERROR: InpRecoveryGridMaxLevels must be >= InpRecoveryAbortBeforeLevel.");
+      return false;
+     }
+
+   if(InpMaxRecoverySteps > 0 &&
+      InpMaxRecoverySteps < InpRecoveryAbortBeforeLevel)
+     {
+      Print("ERROR: InpMaxRecoverySteps must be 0 or >= InpRecoveryAbortBeforeLevel.");
+      return false;
+     }
+
+   if(InpMaxRecoveryPositions > 0 &&
+      InpMaxRecoveryPositions < InpRecoveryAbortBeforeLevel)
+     {
+      Print("ERROR: InpMaxRecoveryPositions must be 0 or >= InpRecoveryAbortBeforeLevel, otherwise the abort trigger cannot be reached.");
+      return false;
+     }
+
+   Print("INFO: [RECOVERY_HARD_ABORT_CONFIG] Grid will close the active recovery basket before L",
+         InpRecoveryAbortBeforeLevel,
+         ". L", InpRecoveryAbortBeforeLevel, " will not be opened.");
+   return true;
+  }
+
+//+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
@@ -223,6 +277,8 @@ int OnInit()
    if(!ValidateRecoveryClassicSignalInputs())
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateRecoveryDistanceSignalInputs())
+      return(INIT_PARAMETERS_INCORRECT);
+   if(!ValidateRecoveryHardAbortInputs())
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateOriginalStructureDiagnosticInputs())
       return(INIT_PARAMETERS_INCORRECT);
@@ -282,6 +338,7 @@ void OnDeinit(const int reason)
    PrintMainStopLossSummary();
    PrintOriginalTradeDiagnosticsSummary();
    PrintLateConfirmationGuardSummary();
+   PrintRecoveryHardAbortSummary();
    DetachAccountStatusDashboard();
    ReleaseAllHandles(g_handles);
    DeleteRecoveryLines();

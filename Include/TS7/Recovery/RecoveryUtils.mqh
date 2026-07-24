@@ -163,6 +163,98 @@ bool CloseAllRecoveryPositions()
   }
 
 //+------------------------------------------------------------------+
+//| Complete a previously triggered GRID hard abort                  |
+//+------------------------------------------------------------------+
+bool ContinueRecoveryHardAbortCleanup()
+  {
+   if(!g_recoveryHardAbortPending)
+      return false;
+
+   g_closingRecoveryPositions = true;
+   bool deleteDone = DeleteRecoveryPendingOrders();
+   bool closeDone = CloseAllRecoveryPositions();
+   if(deleteDone)
+      deleteDone = DeleteRecoveryPendingOrders();
+
+   int remainingPositions = CountRecoveryPositions();
+   int remainingPending = CountRecoveryPendingOrders();
+   bool exposureCleared =
+      (remainingPositions == 0 && remainingPending == 0);
+
+   if(closeDone && deleteDone && exposureCleared)
+     {
+      g_recoveryHardAbortCount++;
+      g_recoveryHardAbortTotalBasketPL += g_recoveryHardAbortBasketPL;
+      Print("WARNING: [RECOVERY_HARD_ABORT_COMPLETE] Recovery failed before L",
+            g_recoveryHardAbortLevel,
+            ". Trigger=", DoubleToString(g_recoveryHardAbortTriggerPrice, _Digits),
+            " BasketPLAtTrigger=", DoubleToString(g_recoveryHardAbortBasketPL, 2),
+            " ClosedRecoveryPL=", DoubleToString(g_recoveryClosedProfit, 2),
+            " AbortCount=", g_recoveryHardAbortCount,
+            ". Normal entry resumes after configured recovery cooldown.");
+      ResetRecoveryState("HARD_ABORT_BEFORE_LEVEL");
+      g_closingRecoveryPositions = false;
+      return true;
+     }
+
+   Print("WARNING: [RECOVERY_HARD_ABORT_RETRY] Cleanup incomplete before L",
+         g_recoveryHardAbortLevel,
+         ". CloseDone=", (closeDone ? "true" : "false"),
+         " DeleteDone=", (deleteDone ? "true" : "false"),
+         " RemainingPos=", remainingPositions,
+         " RemainingPending=", remainingPending,
+         ". Recovery remains blocked.");
+   g_closingRecoveryPositions = false;
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//| Trigger GRID hard abort instead of opening the configured level  |
+//+------------------------------------------------------------------+
+bool TryTriggerRecoveryHardAbort(const int level,
+                                 const double triggerPrice,
+                                 const double bid,
+                                 const double ask)
+  {
+   if(InpRecoveryAbortBeforeLevel <= 0 ||
+      InpRecoveryMode != RECOVERY_MODE_GRID ||
+      level < InpRecoveryAbortBeforeLevel)
+      return false;
+
+   if(!g_recoveryHardAbortPending)
+     {
+      g_recoveryHardAbortPending = true;
+      g_recoveryHardAbortLevel = level;
+      g_recoveryHardAbortTriggerPrice = triggerPrice;
+      g_recoveryHardAbortBasketPL =
+         g_recoveryClosedProfit + GetRecoveryFloatingProfit();
+      Print("WARNING: [RECOVERY_HARD_ABORT_TRIGGER] L", level,
+            " condition reached. L", level, " will not be opened.",
+            " Steps=", g_recoveryStepCount,
+            " RecoveryPositions=", CountRecoveryPositions(),
+            " Trigger=", DoubleToString(triggerPrice, _Digits),
+            " Bid=", DoubleToString(bid, _Digits),
+            " Ask=", DoubleToString(ask, _Digits),
+            " BasketPL=", DoubleToString(g_recoveryHardAbortBasketPL, 2));
+     }
+
+   ContinueRecoveryHardAbortCleanup();
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+void PrintRecoveryHardAbortSummary()
+  {
+   if(InpRecoveryAbortBeforeLevel <= 0)
+      return;
+   Print("INFO: [RECOVERY_HARD_ABORT_SUMMARY] BeforeLevel=",
+         InpRecoveryAbortBeforeLevel,
+         " AbortedCycles=", g_recoveryHardAbortCount,
+         " TriggerBasketPLSum=",
+         DoubleToString(g_recoveryHardAbortTotalBasketPL, 2));
+  }
+
+//+------------------------------------------------------------------+
 int CountRecoveryPendingOrders()
   {
    int count = 0;

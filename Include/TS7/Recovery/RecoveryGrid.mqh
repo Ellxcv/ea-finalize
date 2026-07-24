@@ -92,6 +92,8 @@ void HandleGridTrendSignalMode(const double bid, const double ask)
    double marketEntryPrice = (gridDirection > 0) ? ask : bid;
    if(g_recoveryGridLastExecPrice > 0.0 && MathAbs(marketEntryPrice - g_recoveryGridLastExecPrice) < g_recoveryGridStepPrice)
       return;
+   if(TryTriggerRecoveryHardAbort(level, triggerPrice, bid, ask))
+      return;
 
    if(gridDirection > 0)
      {
@@ -204,6 +206,8 @@ void HandleGridRecoveryMode(const double bid, const double ask)
          bool levelTriggered = forceLevel1 || naturalTriggered;
          if(levelDone || !levelTriggered || gridDirection == 0)
             continue;
+         if(TryTriggerRecoveryHardAbort(level, triggerPrice, bid, ask))
+            return;
 
          if(gridDirection > 0)
            {
@@ -276,6 +280,8 @@ void HandleGridRecoveryMode(const double bid, const double ask)
       // Hedge-both grid: BUY on upper levels, SELL on lower levels
       if(level < ArraySize(g_recoveryGridUpperDone) && !g_recoveryGridUpperDone[level] && bid >= upperPrice)
         {
+         if(TryTriggerRecoveryHardAbort(level, upperPrice, bid, ask))
+            return;
          string recComment = InpBuyComment + " " + RECOVERY_TAG;
          if(g_trade.Buy(nextLot, _Symbol, ask, 0.0, 0.0, recComment))
            {
@@ -304,6 +310,8 @@ void HandleGridRecoveryMode(const double bid, const double ask)
 
       if(level < ArraySize(g_recoveryGridLowerDone) && !g_recoveryGridLowerDone[level] && bid <= lowerPrice)
         {
+         if(TryTriggerRecoveryHardAbort(level, lowerPrice, bid, ask))
+            return;
          string recComment = InpSellComment + " " + RECOVERY_TAG;
          if(g_trade.Sell(nextLot, _Symbol, bid, 0.0, 0.0, recComment))
            {

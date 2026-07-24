@@ -34,6 +34,10 @@ void ResetRecoveryState(const string completionReason)
    g_recoveryBuyDone      = false;
    g_recoverySellDone     = false;
    g_recoveryStepCount    = 0;
+   g_recoveryHardAbortPending = false;
+   g_recoveryHardAbortLevel = 0;
+   g_recoveryHardAbortTriggerPrice = 0.0;
+   g_recoveryHardAbortBasketPL = 0.0;
    g_recoveryZoneBreached = false;
    g_recoveryGridAnchorPrice = 0.0;
    g_recoveryGridStepPrice   = 0.0;
@@ -277,6 +281,13 @@ void HandleRecoveryZone()
      {
       if(g_recoveryPendingStart && InpRecoveryMode == RECOVERY_MODE_CLASSIC_ZONE)
          TryStartClassicRecoveryFromSignal(g_symbolInfo.Bid(), g_symbolInfo.Ask());
+      return;
+     }
+
+   // A partial cleanup must remain fail-closed: retry and never open the blocked level.
+   if(g_recoveryHardAbortPending)
+     {
+      ContinueRecoveryHardAbortCleanup();
       return;
      }
 

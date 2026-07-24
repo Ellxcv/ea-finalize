@@ -191,6 +191,7 @@ input int    InpRecoveryBasicEmaFast    = 21;         // DISTANCE BASIC EMA fast
 input int    InpRecoveryBasicEmaSlow    = 55;         // DISTANCE BASIC EMA slow
 
 input group "Recovery Risk Control"
+input int    InpRecoveryAbortBeforeLevel = 0;        // GRID: close recovery basket before opening this level (0=off, e.g. 4=allow L1-L3)
 input int    InpMaxRecoverySteps        = 0;          // Max recovery steps (0=unlimited)
 input double InpMaxRecoveryLot          = 0;       // Max recovery lot (0=unlimited)
 input double InpRecoveryMaxDrawdown     = 0;       // Max recovery drawdown $ (0=off)
