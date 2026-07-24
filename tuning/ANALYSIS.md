@@ -381,7 +381,7 @@ Untuk setiap run, jawab:
 | 12 | HiLo+ST M1 simultaneous late flip menghasilkan chase entry | Block exact mask 5 secara simetris, default-off | WR naik, recovery dan L4+ turun, coverage/PF/net/DD terjaga | Implemented; folder 25 next |
 | 13 | Entry terlalu dekat structural S/R meningkatkan deep recovery | Log confirmed-pivot S/R M1/M5, room ATR, trend, swing, dan level age | Tolak >=20% L4+ dengan <=10% winner pada dua bagian waktu | Rejected on M1, M5, and combined |
 | 14 | Salah satu confirmation filter redundan dan dapat dihapus | Matikan HiLo, PSAR, ST M1, atau ST M5 satu per run dengan guard OFF | WR/recovery/L4+ membaik tanpa stop-out atau DD rusak | Rejected; PSAR OFF only marginal |
-| 15 | Initial SL berbasis volatilitas mengurangi original loss yang terlalu cepat | Tambahkan mode candle-anchored ATR 14 RMA × 1.4, default-off | WR/recovery membaik tanpa loss size, L4+, PF, atau DD memburuk | Implemented; folders 32–33 next |
+| 15 | Initial SL berbasis volatilitas mengurangi original loss yang terlalu cepat | Tambahkan mode candle-anchored ATR 14 RMA × 1.4, default-off | WR/recovery membaik tanpa loss size, L4+, PF, atau DD memburuk | Inconclusive; folder 32 changed multiple groups |
 
 ## Decision log
 
@@ -407,6 +407,7 @@ Untuk setiap run, jawab:
 | 2026-07-23 | M5 market-structure diagnostics folder 27 | Close S/R as an entry-guard hypothesis | M5 and every screened M1+M5 pair still fail the L4+ catch / winner-loss screen | Move to candle/volatility regime or session-transition diagnostics |
 | 2026-07-23 | Indicator ablation folders 28–31 | Keep all four confirmation filters | HiLo/ST M1/ST M5 OFF stop out; PSAR OFF gives only marginal aggregate gain and L4+ rises to 55 | Implement optional ATR initial SL without changing entry |
 | 2026-07-24 | ATR initial-stop implementation | Prepare fixed regression and one ATR experiment | Default remains fixed; ATR uses closed-candle high/low plus RMA 14 × 1.4 and actual SL distance for dynamic lot | Backtest folders 32–33 |
+| 2026-07-24 | Folder 32 preset audit | Do not interpret as isolated ATR test; freeze as `folder32_v1` ML baseline | Actual preset used ATR SL plus different entry, session, trailing, and recovery settings, so causality versus folder 25 is unavailable | Use exact manifest for observation-only ML dataset logger |
 
 ## Compound readiness gate
 

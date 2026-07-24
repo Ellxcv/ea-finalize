@@ -148,10 +148,23 @@ untuk diterima.
 ## Verification
 
 - MetaEditor compile: 0 errors, 0 warnings.
-- Fixed Strategy Tester regression: pending folder 32.
-- ATR Strategy Tester comparison: pending folder 33.
+- Fixed Strategy Tester regression: tidak dijalankan pada folder 32.
+- ATR Strategy Tester comparison: tidak dapat dianggap one-variable comparison.
 
 ## Status
 
-Implementation ready; menunggu folder 32–33. Raw report, preset, screenshot, dan journal tidak
-di-commit.
+Implementasi ATR siap, tetapi rencana test awal tidak diikuti sebagai controlled experiment.
+Audit preset aktual folder 32 menemukan:
+
+- `InpMainStopLossMode=MAIN_SL_ATR_CANDLE`, bukan fixed control;
+- late-confirmation guard OFF;
+- CCI validity 5;
+- SuperTrend M1 70/2.0 dan PSAR 0.01/0.01/0.1;
+- session, recovery, dan beberapa parameter lain berbeda dari folder 25.
+
+Karena lebih dari satu kelompok setting berubah, folder 32 tidak membuktikan efek kausal ATR SL
+terhadap folder 25. Run tersebut sekarang dibekukan sebagai baseline ML mandiri
+`folder32_v1`; manifest lengkap tersedia di
+[../../../docs/ml-folder32-v1-baseline.md](../../../docs/ml-folder32-v1-baseline.md).
+
+Raw report, preset, screenshot, journal, dan binary tidak di-commit.
