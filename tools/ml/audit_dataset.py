@@ -170,8 +170,7 @@ def canonical_config_hash(config: Mapping[str, Any]) -> str:
 def validate_config(config: Mapping[str, Any]) -> None:
     required = (
         "schema_version", "expected_strategy_version", "expected_preset_sha256",
-        "expected_symbol", "expected_timeframe", "expected_test_from",
-        "expected_test_to", "expected_initial_deposit", "expected_currency",
+        "expected_symbol", "expected_timeframe", "expected_initial_deposit", "expected_currency",
         "expected_leverage", "source_revision_pattern",
         "financial_tolerance", "price_tolerance", "required_barrier_horizons",
         "binary_barrier_outcomes", "accepted_business_outcomes",
@@ -194,10 +193,7 @@ def validate_config(config: Mapping[str, Any]) -> None:
         raise AuditFailure(f"Invalid source_revision_pattern: {exc}") from exc
     if float(config["financial_tolerance"]) < 0 or float(config["price_tolerance"]) < 0:
         raise AuditFailure("Financial and price tolerance cannot be negative")
-    expected_from = parse_time(str(config["expected_test_from"]) + " 00:00:00")
-    expected_to = parse_time(str(config["expected_test_to"]) + " 00:00:00")
-    if expected_from is None or expected_to is None or expected_from >= expected_to:
-        raise AuditFailure("expected_test_from/expected_test_to is invalid")
+    configured_test_windows(config)
     expected_deposit = parse_float(str(config["expected_initial_deposit"]))
     if expected_deposit is None or expected_deposit <= 0:
         raise AuditFailure("expected_initial_deposit must be positive")
@@ -255,6 +251,42 @@ def parse_time(value: str) -> datetime | None:
         return datetime.strptime(value, "%Y.%m.%d %H:%M:%S")
     except ValueError:
         return None
+
+
+def configured_test_windows(
+    config: Mapping[str, Any],
+) -> list[tuple[str, str, datetime, datetime]]:
+    configured = config.get("expected_test_windows")
+    if configured is None:
+        if "expected_test_from" not in config or "expected_test_to" not in config:
+            raise AuditFailure(
+                "Configure expected_test_from/expected_test_to or expected_test_windows"
+            )
+        configured = [
+            {
+                "from": config["expected_test_from"],
+                "to": config["expected_test_to"],
+            }
+        ]
+    if not isinstance(configured, list) or not configured:
+        raise AuditFailure("expected_test_windows must be a non-empty array")
+    output: list[tuple[str, str, datetime, datetime]] = []
+    seen: set[tuple[str, str]] = set()
+    for index, item in enumerate(configured):
+        if not isinstance(item, dict) or "from" not in item or "to" not in item:
+            raise AuditFailure(f"expected_test_windows[{index}] must contain from/to")
+        from_text = str(item["from"])
+        to_text = str(item["to"])
+        date_from = parse_time(from_text + " 00:00:00")
+        date_to = parse_time(to_text + " 00:00:00")
+        if date_from is None or date_to is None or date_from >= date_to:
+            raise AuditFailure(f"expected_test_windows[{index}] is invalid")
+        key = (from_text, to_text)
+        if key in seen:
+            raise AuditFailure(f"Duplicate expected test window: {from_text} to {to_text}")
+        seen.add(key)
+        output.append((from_text, to_text, date_from, date_to))
+    return output
 
 
 def add_issue(
@@ -424,15 +456,21 @@ def validate_collection_context(audit: RunAudit, config: Mapping[str, Any]) -> N
     if date_from is None or date_to is None or date_from >= date_to:
         add_issue(audit, "ERROR", "INVALID_TEST_WINDOW", "Tester from/to is invalid")
     else:
-        expected_from = parse_time(str(config["expected_test_from"]) + " 00:00:00")
-        expected_to = parse_time(str(config["expected_test_to"]) + " 00:00:00")
-        if date_from != expected_from or date_to != expected_to:
+        expected_windows = configured_test_windows(config)
+        if not any(
+            date_from == expected_from and date_to == expected_to
+            for _, _, expected_from, expected_to in expected_windows
+        ):
+            expected_text = ", ".join(
+                f"{from_text} to {to_text}"
+                for from_text, to_text, _, _ in expected_windows
+            )
             add_issue(
                 audit,
                 "ERROR",
                 "TEST_WINDOW_MISMATCH",
-                f"Expected {config['expected_test_from']} to {config['expected_test_to']}, "
-                f"found {tester.get('from')} to {tester.get('to')}",
+                f"Expected one of [{expected_text}], found "
+                f"{tester.get('from')} to {tester.get('to')}",
             )
     for field_name in ("initial_deposit", "final_balance"):
         if parse_float(str(tester.get(field_name, ""))) is None:

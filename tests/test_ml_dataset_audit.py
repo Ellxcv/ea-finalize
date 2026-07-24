@@ -284,6 +284,31 @@ class DatasetAuditTests(unittest.TestCase):
         issues = (self.root / "processed" / "audit_issues.csv").read_text()
         self.assertIn("INITIAL_DEPOSIT_MISMATCH", issues)
 
+    def test_allowlisted_test_windows_accept_only_exact_window(self) -> None:
+        raw_root = self.root / "raw"
+        raw_root.mkdir()
+        run_dir = create_run(raw_root, "run-a")
+        self.config.pop("expected_test_from")
+        self.config.pop("expected_test_to")
+        self.config["expected_test_windows"] = [
+            {"from": "2025.09.01", "to": "2026.01.03"},
+            {"from": "2026.01.01", "to": "2026.02.01"},
+        ]
+
+        accepted = self.run_audit(raw_root, "accepted")
+        self.assertEqual(accepted["totals"]["errors"], 0)
+
+        context_path = run_dir / "collection_context.json"
+        context = json.loads(context_path.read_text(encoding="utf-8"))
+        context["tester"]["from"] = "2026.03.01"
+        context["tester"]["to"] = "2026.04.01"
+        context_path.write_text(json.dumps(context), encoding="utf-8")
+        rejected = self.run_audit(raw_root, "rejected")
+
+        self.assertGreater(rejected["totals"]["errors"], 0)
+        issues = (self.root / "rejected" / "audit_issues.csv").read_text()
+        self.assertIn("TEST_WINDOW_MISMATCH", issues)
+
     def test_identical_cross_run_duplicate_keeps_first(self) -> None:
         raw_root = self.root / "raw"
         raw_root.mkdir()

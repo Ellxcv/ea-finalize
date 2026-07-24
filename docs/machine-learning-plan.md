@@ -465,6 +465,10 @@ Status tooling: selesai diimplementasikan pada 2026-07-24. Eksperimen awal 982 c
 tetapi tidak menemukan sinyal walk-forward yang cukup untuk membekukan model. Logistic Regression
 menjadi exploratory champion dengan ROC-AUC 0,498; final OOS tetap belum dibuka.
 
+Development window validity 5 pada 2025.09.01–2026.01.03 kemudian mengalami practical margin
+call pada 2025.09.09. Phase 3 training tambahan ditunda sementara `folder32_cci3_v1` diuji sebagai
+challenger strategi terpisah. Challenger tidak boleh digabung dengan dataset/model `folder32_v1`.
+
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;
 - latih Logistic Regression dan tree challengers;
