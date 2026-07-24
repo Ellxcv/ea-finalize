@@ -102,6 +102,79 @@ class DualBusinessModelTests(unittest.TestCase):
         self.assertEqual(indices, [1, 2])
         self.assertEqual(labels, [0, 1])
 
+    def test_feature_v3_experiment_configs_are_staged_and_valid(self) -> None:
+        expected_additions = {
+            "volatility": {
+                "AtrRatioMean50",
+                "AtrRatioMean200",
+                "AtrPercentile200",
+                "AtrTrend5",
+                "AtrTrend20",
+                "AtrShockRatio",
+            },
+            "durability": {
+                "TrendAgeBars",
+                "DirectionalPersistence10",
+                "DirectionalPersistence20",
+                "TrendEfficiency10",
+                "TrendEfficiency20",
+                "PullbackCount20",
+                "MaxOpposingRun20",
+            },
+            "momentum": {
+                "DirectionalVelocity1",
+                "DirectionalVelocity3",
+                "DirectionalVelocity5",
+                "VelocityAcceleration1v3",
+                "VelocityAcceleration3v5",
+                "DirectionalPressure10",
+                "OpposingPressure10",
+            },
+            "structure": {
+                "NearestSupportDistanceATR",
+                "NearestResistanceDistanceATR",
+                "DirectionalLevelRoomATR",
+                "OpposingLevelDistanceATR",
+                "SupportAgeBars",
+                "ResistanceAgeBars",
+                "SupportTouchCount",
+                "ResistanceTouchCount",
+                "StructureWidthATR",
+            },
+        }
+        core = DUAL.baseline.read_config(
+            REPO_ROOT
+            / "config"
+            / "ml-phase3-zero-l4-feature-v3-core.json"
+        )
+        DUAL.validate_config(core)
+        core_features = set(core["feature_contract"]["numeric"])
+        self.assertEqual(core["dataset_schema"], "ts7_entry_candidate_v3")
+        self.assertEqual(len(core_features), 28)
+
+        for name, additions in expected_additions.items():
+            with self.subTest(name=name):
+                config = DUAL.baseline.read_config(
+                    REPO_ROOT
+                    / "config"
+                    / f"ml-phase3-zero-l4-feature-v3-{name}.json"
+                )
+                DUAL.validate_config(config)
+                features = set(config["feature_contract"]["numeric"])
+                self.assertEqual(features - core_features, additions)
+                self.assertEqual(
+                    config["acceptance_gates"]["allowed_l4_plus_max"], 0
+                )
+        structure = DUAL.baseline.read_config(
+            REPO_ROOT
+            / "config"
+            / "ml-phase3-zero-l4-feature-v3-structure.json"
+        )
+        self.assertIn(
+            "TrappedBetweenLevels",
+            structure["feature_contract"]["boolean"],
+        )
+
     def test_class_balancing_is_deterministic_and_balanced(self) -> None:
         matrix = [[float(index)] for index in range(10)]
         labels = [0] * 8 + [1] * 2

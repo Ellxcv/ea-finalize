@@ -256,6 +256,47 @@ def upgrade_run_to_v2(run_dir: Path) -> None:
         write_csv(path, header, rows)
 
 
+def upgrade_run_to_v3(run_dir: Path) -> None:
+    upgrade_run_to_v2(run_dir)
+    manifest_path = run_dir / "run_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.update(
+        {
+            "schema_version": AUDIT.SCHEMA_VERSION_V3,
+            "feature_contract": "compact_regime_momentum_structure_v3",
+            "volatility_atr_history_bars": 200,
+            "price_dynamics_history_bars": 200,
+            "structure_timeframe": "PERIOD_M1",
+            "structure_left_bars": 2,
+            "structure_right_bars": 2,
+            "structure_history_bars": 200,
+            "structure_touch_tolerance_atr": 0.15,
+            "trapped_width_atr": 2.0,
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    for file_name, header in (
+        ("candidate_setups.csv", AUDIT.CANDIDATE_HEADER_V3),
+        ("trade_entries.csv", AUDIT.TRADE_ENTRY_HEADER),
+        ("trade_outcomes.csv", AUDIT.TRADE_OUTCOME_HEADER),
+        ("cycle_outcomes.csv", AUDIT.CYCLE_OUTCOME_HEADER),
+        ("barrier_outcomes.csv", AUDIT.BARRIER_OUTCOME_HEADER),
+    ):
+        path = run_dir / file_name
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        for row in rows:
+            row["SchemaVersion"] = AUDIT.SCHEMA_VERSION_V3
+            if file_name == "candidate_setups.csv":
+                row["FeatureReadyV3"] = "true"
+                for feature in AUDIT.CANDIDATE_V3_FEATURES:
+                    row[feature] = (
+                        "true" if feature == "TrappedBetweenLevels" else "1"
+                    )
+        write_csv(path, header, rows)
+
+
 class DatasetAuditTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -321,6 +362,43 @@ class DatasetAuditTests(unittest.TestCase):
         rows[0]["FeatureReadyV2"] = "false"
         write_csv(candidate_path, AUDIT.CANDIDATE_HEADER_V2, rows)
         self.config["schema_version"] = AUDIT.SCHEMA_VERSION_V2
+
+        report = self.run_audit(raw_root)
+
+        self.assertEqual(report["totals"]["retained_candidates"], 0)
+        self.assertEqual(report["totals"]["excluded_candidates"], 1)
+
+    def test_v3_run_requires_and_retains_compact_features(self) -> None:
+        raw_root = self.root / "raw"
+        raw_root.mkdir()
+        run_dir = create_run(raw_root, "run-v3")
+        upgrade_run_to_v3(run_dir)
+        self.config["schema_version"] = AUDIT.SCHEMA_VERSION_V3
+
+        report = self.run_audit(raw_root)
+
+        self.assertEqual(report["schema_version"], AUDIT.SCHEMA_VERSION_V3)
+        self.assertEqual(report["totals"]["retained_candidates"], 1)
+        with (self.root / "processed" / "merged_candidates.csv").open(
+            "r", encoding="utf-8", newline=""
+        ) as handle:
+            header = tuple(next(csv.reader(handle)))
+        self.assertEqual(
+            header,
+            AUDIT.CANDIDATE_HEADER_V3 + AUDIT.MERGED_LABEL_HEADER,
+        )
+
+    def test_v3_readiness_false_excludes_candidate(self) -> None:
+        raw_root = self.root / "raw"
+        raw_root.mkdir()
+        run_dir = create_run(raw_root, "run-v3")
+        upgrade_run_to_v3(run_dir)
+        candidate_path = run_dir / "candidate_setups.csv"
+        with candidate_path.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        rows[0]["FeatureReadyV3"] = "false"
+        write_csv(candidate_path, AUDIT.CANDIDATE_HEADER_V3, rows)
+        self.config["schema_version"] = AUDIT.SCHEMA_VERSION_V3
 
         report = self.run_audit(raw_root)
 

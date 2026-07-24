@@ -113,3 +113,7 @@ XGBoost menjadi development leader dan memperbaiki ranking kedua target, win rat
 reduction. Namun tidak satu pun validation fold menemukan threshold feasible dengan nol L4+ pada
 batas aktivitas yang ditetapkan. Evaluation XGBoost masih meloloskan 28 dari 62 L4+. Status tetap
 `REJECTED_NOT_FROZEN`: runtime EA tidak berubah dan final OOS tidak dibuka.
+
+Schema v3 berikutnya sudah diimplementasikan untuk menguji empat hipotesis baru secara terpisah:
+volatility regime, trend durability, pre-entry momentum, dan dynamic structure. Kontrak lengkap:
+[ml-entry-candidate-v3-schema.md](ml-entry-candidate-v3-schema.md).

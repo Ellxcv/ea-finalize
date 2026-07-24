@@ -1,0 +1,37 @@
+{
+  "extends": "ml-phase3-dual-business-zero-l4-v3.json",
+  "config_version": "ts7_ml_phase3_zero_l4_feature_v3_core",
+  "dataset_schema": "ts7_entry_candidate_v3",
+  "feature_contract": {
+    "numeric": [
+      "Direction",
+      "SignalAgeBars",
+      "SpreadATR",
+      "ATR_M5",
+      "ATRRatioM1M5",
+      "InitialSLATR",
+      "CciSignal",
+      "CciCandidate",
+      "CciDeltaDir",
+      "CciGapCandidateDir",
+      "ConfirmationsAtSignal",
+      "STMTFLatencySeconds",
+      "DisplacementATR",
+      "PreEntryMFEATR",
+      "PreEntryMAEATR",
+      "DistanceEMAATR",
+      "RecentRangePositionDir",
+      "TimeOfDaySin",
+      "TimeOfDayCos",
+      "DayOfWeekSin",
+      "DayOfWeekCos",
+      "MinutesFromSessionOpen",
+      "MinutesToSessionClose",
+      "DirectionalRoomATR",
+      "AdxValue",
+      "DiGapDir",
+      "CciSlope1Dir",
+      "ATRChange1"
+    ]
+  }
+}

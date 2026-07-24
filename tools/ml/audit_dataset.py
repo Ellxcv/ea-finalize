@@ -20,7 +20,12 @@ from typing import Any, Iterable, Mapping, Sequence
 
 SCHEMA_VERSION_V1 = "ts7_entry_candidate_v1"
 SCHEMA_VERSION_V2 = "ts7_entry_candidate_v2"
-SUPPORTED_SCHEMA_VERSIONS = {SCHEMA_VERSION_V1, SCHEMA_VERSION_V2}
+SCHEMA_VERSION_V3 = "ts7_entry_candidate_v3"
+SUPPORTED_SCHEMA_VERSIONS = {
+    SCHEMA_VERSION_V1,
+    SCHEMA_VERSION_V2,
+    SCHEMA_VERSION_V3,
+}
 # Backward-compatible aliases used by the v1 fixture tests and retained configs.
 SCHEMA_VERSION = SCHEMA_VERSION_V1
 CSV_FILES = (
@@ -64,6 +69,26 @@ CANDIDATE_HEADER_V2 = (
     CANDIDATE_HEADER_V1[:-1]
     + ("FeatureReadyV2",)
     + CANDIDATE_V2_FEATURES
+    + ("DataIntegrityFlag",)
+)
+CANDIDATE_V3_FEATURES = (
+    "AtrRatioMean50", "AtrRatioMean200", "AtrPercentile200",
+    "AtrTrend5", "AtrTrend20", "AtrShockRatio", "TrendAgeBars",
+    "DirectionalPersistence10", "DirectionalPersistence20",
+    "TrendEfficiency10", "TrendEfficiency20", "PullbackCount20",
+    "MaxOpposingRun20", "DirectionalVelocity1", "DirectionalVelocity3",
+    "DirectionalVelocity5", "VelocityAcceleration1v3",
+    "VelocityAcceleration3v5", "DirectionalPressure10",
+    "OpposingPressure10", "NearestSupportDistanceATR",
+    "NearestResistanceDistanceATR", "DirectionalLevelRoomATR",
+    "OpposingLevelDistanceATR", "SupportAgeBars", "ResistanceAgeBars",
+    "SupportTouchCount", "ResistanceTouchCount", "StructureWidthATR",
+    "TrappedBetweenLevels",
+)
+CANDIDATE_HEADER_V3 = (
+    CANDIDATE_HEADER_V2[:-1]
+    + ("FeatureReadyV3",)
+    + CANDIDATE_V3_FEATURES
     + ("DataIntegrityFlag",)
 )
 CANDIDATE_HEADER = CANDIDATE_HEADER_V1
@@ -121,6 +146,9 @@ BASE_REQUIRED_FEATURES = (
     "AsiaSession", "LondonSession", "NewYorkSession",
 )
 BASE_REQUIRED_FEATURES_V2 = BASE_REQUIRED_FEATURES + CANDIDATE_V2_FEATURES
+BASE_REQUIRED_FEATURES_V3 = (
+    BASE_REQUIRED_FEATURES_V2 + CANDIDATE_V3_FEATURES
+)
 
 MERGED_LABEL_HEADER = (
     "Barrier40Outcome", "Barrier40ElapsedBars", "Barrier50Outcome",
@@ -190,6 +218,8 @@ def candidate_header_for_schema(schema_version: str) -> tuple[str, ...]:
         return CANDIDATE_HEADER_V1
     if schema_version == SCHEMA_VERSION_V2:
         return CANDIDATE_HEADER_V2
+    if schema_version == SCHEMA_VERSION_V3:
+        return CANDIDATE_HEADER_V3
     raise AuditFailure(f"Unsupported schema_version: {schema_version!r}")
 
 
@@ -206,6 +236,8 @@ def required_features_for_schema(schema_version: str) -> tuple[str, ...]:
         return BASE_REQUIRED_FEATURES
     if schema_version == SCHEMA_VERSION_V2:
         return BASE_REQUIRED_FEATURES_V2
+    if schema_version == SCHEMA_VERSION_V3:
+        return BASE_REQUIRED_FEATURES_V3
     raise AuditFailure(f"Unsupported schema_version: {schema_version!r}")
 
 
@@ -432,11 +464,22 @@ def validate_manifest(audit: RunAudit, config: Mapping[str, Any]) -> None:
         "primary_horizon_bars", "sensitivity_horizon_bars",
         "data_integrity_flag", "build_time", "tester", "optimization",
     )
-    if config["schema_version"] == SCHEMA_VERSION_V2:
+    if config["schema_version"] in (SCHEMA_VERSION_V2, SCHEMA_VERSION_V3):
         required += (
             "feature_contract", "feature_snapshot", "adx_timeframe",
             "adx_dmi_period", "adx_smoothing_enabled",
             "adx_smoothing_period",
+        )
+    if config["schema_version"] == SCHEMA_VERSION_V3:
+        required += (
+            "volatility_atr_history_bars",
+            "price_dynamics_history_bars",
+            "structure_timeframe",
+            "structure_left_bars",
+            "structure_right_bars",
+            "structure_history_bars",
+            "structure_touch_tolerance_atr",
+            "trapped_width_atr",
         )
     for key in required:
         if key not in manifest:
@@ -485,16 +528,21 @@ def validate_manifest(audit: RunAudit, config: Mapping[str, Any]) -> None:
         add_issue(audit, "ERROR", "BARRIER_CONTRACT_MISMATCH", "Sensitivity horizon must be 40")
     if manifest.get("optimization") is True:
         add_issue(audit, "ERROR", "OPTIMIZATION_RUN_REJECTED", "Optimization runs are not retained")
-    if config["schema_version"] == SCHEMA_VERSION_V2:
-        if manifest.get("feature_contract") != "entry_state_strength_distance_v2":
+    if config["schema_version"] in (SCHEMA_VERSION_V2, SCHEMA_VERSION_V3):
+        expected_contract = (
+            "entry_state_strength_distance_v2"
+            if config["schema_version"] == SCHEMA_VERSION_V2
+            else "compact_regime_momentum_structure_v3"
+        )
+        if manifest.get("feature_contract") != expected_contract:
             add_issue(
                 audit, "ERROR", "FEATURE_CONTRACT_MISMATCH",
-                "Unexpected v2 feature contract",
+                "Unexpected feature contract",
             )
         if manifest.get("feature_snapshot") != "CLOSED_BARS_ONLY_AT_CANDIDATE":
             add_issue(
                 audit, "ERROR", "FEATURE_SNAPSHOT_MISMATCH",
-                "V2 feature snapshot must use candidate-time closed bars only",
+                "Feature snapshot must use candidate-time closed bars only",
             )
         if (parse_int(str(manifest.get("adx_dmi_period", ""))) or 0) <= 0:
             add_issue(
@@ -506,6 +554,30 @@ def validate_manifest(audit: RunAudit, config: Mapping[str, Any]) -> None:
                 audit, "ERROR", "ADX_CONTRACT_INVALID",
                 "adx_smoothing_period must be positive",
             )
+    if config["schema_version"] == SCHEMA_VERSION_V3:
+        positive_integer_fields = (
+            "volatility_atr_history_bars",
+            "price_dynamics_history_bars",
+            "structure_left_bars",
+            "structure_right_bars",
+            "structure_history_bars",
+        )
+        for field_name in positive_integer_fields:
+            if (parse_int(str(manifest.get(field_name, ""))) or 0) <= 0:
+                add_issue(
+                    audit, "ERROR", "V3_CONTRACT_INVALID",
+                    f"{field_name} must be positive",
+                )
+        for field_name in (
+            "structure_touch_tolerance_atr",
+            "trapped_width_atr",
+        ):
+            value = parse_float(str(manifest.get(field_name, "")))
+            if value is None or value <= 0.0:
+                add_issue(
+                    audit, "ERROR", "V3_CONTRACT_INVALID",
+                    f"{field_name} must be positive",
+                )
 
     integrity_flag = str(manifest.get("data_integrity_flag", ""))
     if integrity_flag in set(config["unverified_data_integrity_flags"]):
@@ -735,8 +807,10 @@ def validate_candidates(
     schema_version = str(audit.manifest.get("schema_version", ""))
     required_features = required_features_for_schema(schema_version)
     ready_fields = ["FeatureReady"]
-    if schema_version == SCHEMA_VERSION_V2:
+    if schema_version in (SCHEMA_VERSION_V2, SCHEMA_VERSION_V3):
         ready_fields.append("FeatureReadyV2")
+    if schema_version == SCHEMA_VERSION_V3:
+        ready_fields.append("FeatureReadyV3")
     for setup_id, row in candidates.items():
         for field_name in ("CandidateTime", "CandidateBarTime", "SignalTime"):
             if parse_time(row[field_name]) is None:

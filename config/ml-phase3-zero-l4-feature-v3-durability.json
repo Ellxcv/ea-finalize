@@ -1,0 +1,43 @@
+{
+  "extends": "ml-phase3-zero-l4-feature-v3-core.json",
+  "config_version": "ts7_ml_phase3_zero_l4_feature_v3_durability",
+  "feature_contract": {
+    "numeric": [
+      "Direction",
+      "SignalAgeBars",
+      "SpreadATR",
+      "ATR_M5",
+      "ATRRatioM1M5",
+      "InitialSLATR",
+      "CciSignal",
+      "CciCandidate",
+      "CciDeltaDir",
+      "CciGapCandidateDir",
+      "ConfirmationsAtSignal",
+      "STMTFLatencySeconds",
+      "DisplacementATR",
+      "PreEntryMFEATR",
+      "PreEntryMAEATR",
+      "DistanceEMAATR",
+      "RecentRangePositionDir",
+      "TimeOfDaySin",
+      "TimeOfDayCos",
+      "DayOfWeekSin",
+      "DayOfWeekCos",
+      "MinutesFromSessionOpen",
+      "MinutesToSessionClose",
+      "DirectionalRoomATR",
+      "AdxValue",
+      "DiGapDir",
+      "CciSlope1Dir",
+      "ATRChange1",
+      "TrendAgeBars",
+      "DirectionalPersistence10",
+      "DirectionalPersistence20",
+      "TrendEfficiency10",
+      "TrendEfficiency20",
+      "PullbackCount20",
+      "MaxOpposingRun20"
+    ]
+  }
+}

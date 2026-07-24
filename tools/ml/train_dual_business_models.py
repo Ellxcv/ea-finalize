@@ -45,9 +45,12 @@ def validate_config(config: Mapping[str, Any]) -> None:
         raise baseline.TrainingFailure(
             "Dual-target config is missing: " + ", ".join(missing)
         )
-    if config["dataset_schema"] != "ts7_entry_candidate_v2":
+    if config["dataset_schema"] not in {
+        "ts7_entry_candidate_v2",
+        "ts7_entry_candidate_v3",
+    }:
         raise baseline.TrainingFailure(
-            "Dual-target challenger requires ts7_entry_candidate_v2"
+            "Dual-target challenger requires entry-candidate schema v2 or v3"
         )
 
     feature_contract = config["feature_contract"]

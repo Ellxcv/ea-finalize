@@ -385,6 +385,7 @@ Untuk setiap run, jawab:
 | 16 | Entry-state strength/distance menambah signal prediktif | Tambahkan 15 feature ADX/DI, CCI velocity, ATR, dan indicator geometry | Tolak >=20% L4+ dengan <=10% winner; WR/recovery membaik | Rejected; folders 43–44 only reach 11.29% L4+ |
 | 17 | Barrier label terlalu tidak langsung untuk tujuan bisnis | Challenger target NO_RECOVERY dan L4_PLUS dengan walk-forward validation-only threshold | WR +3 pp, recovery -10%, L4+ rejection >=20%, winner rejection <=10% per fold | Rejected; no fold passes all gates |
 | 18 | Conditional L4 target dan XGBoost dapat menghilangkan deep recovery walau winner rejection tinggi | Train L4+ hanya versus L1-L3; hard gate zero allowed L4+, retained 50%, active days 80% | Nol L4+ pada setiap fold dengan aktivitas terjaga | Rejected on v2 features; XGBoost still allows 28/62 L4+ |
+| 19 | Regime, durability, momentum, atau dynamic structure memisahkan remaining L4+ | Schema v3 observation-only; uji compact core plus satu family per experiment | Zero-L4 gate tercapai tanpa retained/active-day gate rusak | Implemented; Strategy Tester parity next |
 
 ## Decision log
 

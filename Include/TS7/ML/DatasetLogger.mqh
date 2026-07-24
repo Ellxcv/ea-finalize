@@ -5,10 +5,14 @@
 #ifndef TS7_ML_DATASET_LOGGER_MQH
 #define TS7_ML_DATASET_LOGGER_MQH
 
-const string TS7_ML_SCHEMA_VERSION = "ts7_entry_candidate_v2";
+const string TS7_ML_SCHEMA_VERSION = "ts7_entry_candidate_v3";
 const int    TS7_ML_BARRIER_ATR_PERIOD = 14;
 const int    TS7_ML_PRIMARY_HORIZON = 50;
 const int    TS7_ML_SENSITIVITY_HORIZON = 40;
+const int    TS7_ML_V3_ATR_HISTORY = 200;
+const int    TS7_ML_V3_PRICE_HISTORY = 200;
+const double TS7_ML_V3_STRUCTURE_TOUCH_TOLERANCE_ATR = 0.15;
+const double TS7_ML_V3_TRAPPED_WIDTH_ATR = 2.0;
 
 struct SMlBarrierRecord
   {
@@ -56,6 +60,21 @@ struct SMlCandidateState
   {
    string setupId;
    int    orderAttempts;
+  };
+
+struct SMlDynamicStructureSnapshot
+  {
+   bool   ready;
+   double supportDistanceAtr;
+   double resistanceDistanceAtr;
+   double directionalRoomAtr;
+   double opposingLevelDistanceAtr;
+   int    supportAgeBars;
+   int    resistanceAgeBars;
+   int    supportTouchCount;
+   int    resistanceTouchCount;
+   double structureWidthAtr;
+   bool   trappedBetweenLevels;
   };
 
 int g_mlCandidateFile = INVALID_HANDLE;
@@ -197,7 +216,7 @@ bool MlValidateLoggerInputs()
       return true;
    if(_Period != PERIOD_M1)
      {
-      Print("ERROR: [ML_DATASET] Logger schema v2 requires chart timeframe M1.");
+      Print("ERROR: [ML_DATASET] Logger schema v3 requires chart timeframe M1.");
       return false;
      }
    if(StringLen(InpMlStrategyVersion) == 0)
@@ -213,6 +232,14 @@ bool MlValidateLoggerInputs()
    if(InpMlFlushEveryRecords <= 0)
      {
       Print("ERROR: [ML_DATASET] InpMlFlushEveryRecords must be > 0.");
+      return false;
+     }
+   if(InpOriginalStructureLeftBars < 1 ||
+      InpOriginalStructureRightBars < 1 ||
+      InpOriginalStructureHistoryBars < TS7_ML_V3_PRICE_HISTORY)
+     {
+      Print("ERROR: [ML_DATASET] Schema v3 requires structure LeftBars/RightBars >= 1 ",
+            "and HistoryBars >= ", TS7_ML_V3_PRICE_HISTORY, ".");
       return false;
      }
    if(StringLen(InpMlSourceRevision) == 0)
@@ -315,7 +342,17 @@ string MlCandidateHeader()
       "AdxSlope1,DiGapDir,DiGapSlopeDir,CciSlope1Dir,CciSlope3Dir,"
       "ATRChange1,HiLoDistanceATR,HiLoLineSlopeATR,PsarDistanceATR,"
       "PsarLineSlopeATR,STDistanceATR,STLineSlopeATR,STMTFDistanceATR,"
-      "STMTFLineSlopeATR,DataIntegrityFlag";
+      "STMTFLineSlopeATR,FeatureReadyV3,AtrRatioMean50,AtrRatioMean200,"
+      "AtrPercentile200,AtrTrend5,AtrTrend20,AtrShockRatio,TrendAgeBars,"
+      "DirectionalPersistence10,DirectionalPersistence20,TrendEfficiency10,"
+      "TrendEfficiency20,PullbackCount20,MaxOpposingRun20,"
+      "DirectionalVelocity1,DirectionalVelocity3,DirectionalVelocity5,"
+      "VelocityAcceleration1v3,VelocityAcceleration3v5,"
+      "DirectionalPressure10,OpposingPressure10,"
+      "NearestSupportDistanceATR,NearestResistanceDistanceATR,"
+      "DirectionalLevelRoomATR,OpposingLevelDistanceATR,SupportAgeBars,"
+      "ResistanceAgeBars,SupportTouchCount,ResistanceTouchCount,"
+      "StructureWidthATR,TrappedBetweenLevels,DataIntegrityFlag";
   }
 
 //+------------------------------------------------------------------+
@@ -383,8 +420,21 @@ bool MlInitializeDatasetLogger()
       "  \"barrier_atr\": \"RMA_14_M1_CLOSED\",\r\n"
       "  \"primary_horizon_bars\": 50,\r\n"
       "  \"sensitivity_horizon_bars\": 40,\r\n"
-      "  \"feature_contract\": \"entry_state_strength_distance_v2\",\r\n"
+      "  \"feature_contract\": \"compact_regime_momentum_structure_v3\",\r\n"
       "  \"feature_snapshot\": \"CLOSED_BARS_ONLY_AT_CANDIDATE\",\r\n"
+      "  \"volatility_atr_history_bars\": 200,\r\n"
+      "  \"price_dynamics_history_bars\": 200,\r\n"
+      "  \"structure_timeframe\": \"" +
+         MlJsonEscape(EnumToString(ResolveOriginalStructureTimeframe())) + "\",\r\n"
+      "  \"structure_left_bars\": " +
+         IntegerToString(InpOriginalStructureLeftBars) + ",\r\n"
+      "  \"structure_right_bars\": " +
+         IntegerToString(InpOriginalStructureRightBars) + ",\r\n"
+      "  \"structure_history_bars\": " +
+         IntegerToString(MathMax(TS7_ML_V3_PRICE_HISTORY,
+                                 InpOriginalStructureHistoryBars)) + ",\r\n"
+      "  \"structure_touch_tolerance_atr\": 0.15,\r\n"
+      "  \"trapped_width_atr\": 2.0,\r\n"
       "  \"adx_timeframe\": \"" +
          MlJsonEscape(EnumToString((InpAdxTimeframe == PERIOD_CURRENT)
                                     ? (ENUM_TIMEFRAMES)_Period
@@ -704,6 +754,316 @@ bool MlPreEntryExcursion(const int direction,
   }
 
 //+------------------------------------------------------------------+
+double MlMeanSlice(const double &values[],
+                   const int startIndex,
+                   const int count)
+  {
+   if(count <= 0 || startIndex < 0 ||
+      startIndex + count > ArraySize(values))
+      return 0.0;
+   double total = 0.0;
+   for(int i = startIndex; i < startIndex + count; i++)
+      total += values[i];
+   return total / count;
+  }
+
+//+------------------------------------------------------------------+
+double MlTrueRange(const MqlRates &current,
+                   const double previousClose)
+  {
+   return MathMax(current.high - current.low,
+                  MathMax(MathAbs(current.high - previousClose),
+                          MathAbs(current.low - previousClose)));
+  }
+
+//+------------------------------------------------------------------+
+bool MlReadVolatilityRegime(const MqlRates &rates[],
+                            const int ratesCount,
+                            double &atrRatioMean50,
+                            double &atrRatioMean200,
+                            double &atrPercentile200,
+                            double &atrTrend5,
+                            double &atrTrend20,
+                            double &atrShockRatio)
+  {
+   atrRatioMean50 = 0.0;
+   atrRatioMean200 = 0.0;
+   atrPercentile200 = 0.0;
+   atrTrend5 = 0.0;
+   atrTrend20 = 0.0;
+   atrShockRatio = 0.0;
+   if(g_handles.mlBarrierATR == INVALID_HANDLE ||
+      ratesCount < TS7_ML_V3_ATR_HISTORY + 2)
+      return false;
+
+   double atrValues[];
+   ArrayResize(atrValues, TS7_ML_V3_ATR_HISTORY);
+   ArraySetAsSeries(atrValues, true);
+   if(CopyBuffer(g_handles.mlBarrierATR, 0, 1,
+                 TS7_ML_V3_ATR_HISTORY, atrValues) !=
+      TS7_ML_V3_ATR_HISTORY)
+      return false;
+   for(int i = 0; i < TS7_ML_V3_ATR_HISTORY; i++)
+      if(atrValues[i] <= 0.0 || atrValues[i] == EMPTY_VALUE ||
+         !MathIsValidNumber(atrValues[i]))
+         return false;
+
+   double atrCurrent = atrValues[0];
+   double mean50 = MlMeanSlice(atrValues, 0, 50);
+   double mean200 = MlMeanSlice(atrValues, 0, 200);
+   double previousMean5 = MlMeanSlice(atrValues, 5, 5);
+   double previousMean20 = MlMeanSlice(atrValues, 20, 20);
+   if(mean50 <= 0.0 || mean200 <= 0.0 ||
+      previousMean5 <= 0.0 || previousMean20 <= 0.0)
+      return false;
+
+   int atOrBelow = 0;
+   for(int i = 0; i < TS7_ML_V3_ATR_HISTORY; i++)
+      if(atrValues[i] <= atrCurrent)
+         atOrBelow++;
+
+   double previousTrueRangeMean = 0.0;
+   for(int shift = 2; shift <= 21; shift++)
+      previousTrueRangeMean += MlTrueRange(rates[shift],
+                                           rates[shift + 1].close);
+   previousTrueRangeMean /= 20.0;
+   if(previousTrueRangeMean <= 0.0)
+      return false;
+
+   atrRatioMean50 = atrCurrent / mean50;
+   atrRatioMean200 = atrCurrent / mean200;
+   atrPercentile200 =
+      (double)atOrBelow / TS7_ML_V3_ATR_HISTORY;
+   atrTrend5 = MlMeanSlice(atrValues, 0, 5) / previousMean5 - 1.0;
+   atrTrend20 = MlMeanSlice(atrValues, 0, 20) / previousMean20 - 1.0;
+   atrShockRatio =
+      MlTrueRange(rates[1], rates[2].close) / previousTrueRangeMean;
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+double MlDirectionalEfficiency(const int direction,
+                               const MqlRates &rates[],
+                               const int lookback)
+  {
+   double path = 0.0;
+   for(int shift = 1; shift <= lookback; shift++)
+      path += MathAbs(rates[shift].close - rates[shift + 1].close);
+   if(path <= 0.0)
+      return 0.0;
+   return direction * (rates[1].close -
+                       rates[lookback + 1].close) / path;
+  }
+
+//+------------------------------------------------------------------+
+bool MlReadPriceDynamics(const int direction,
+                         const double atrPrice,
+                         const MqlRates &rates[],
+                         const int ratesCount,
+                         int &trendAgeBars,
+                         double &directionalPersistence10,
+                         double &directionalPersistence20,
+                         double &trendEfficiency10,
+                         double &trendEfficiency20,
+                         int &pullbackCount20,
+                         int &maxOpposingRun20,
+                         double &directionalVelocity1,
+                         double &directionalVelocity3,
+                         double &directionalVelocity5,
+                         double &velocityAcceleration1v3,
+                         double &velocityAcceleration3v5,
+                         double &directionalPressure10,
+                         double &opposingPressure10)
+  {
+   trendAgeBars = 0;
+   directionalPersistence10 = 0.0;
+   directionalPersistence20 = 0.0;
+   trendEfficiency10 = 0.0;
+   trendEfficiency20 = 0.0;
+   pullbackCount20 = 0;
+   maxOpposingRun20 = 0;
+   directionalVelocity1 = 0.0;
+   directionalVelocity3 = 0.0;
+   directionalVelocity5 = 0.0;
+   velocityAcceleration1v3 = 0.0;
+   velocityAcceleration3v5 = 0.0;
+   directionalPressure10 = 0.0;
+   opposingPressure10 = 0.0;
+   if((direction != 1 && direction != -1) || atrPrice <= 0.0 ||
+      ratesCount < TS7_ML_V3_PRICE_HISTORY + 2)
+      return false;
+
+   int maximumAge =
+      MathMin(100, ratesCount - 2);
+   for(int shift = 1; shift <= maximumAge; shift++)
+     {
+      double movement =
+         direction * (rates[shift].close - rates[shift + 1].close);
+      if(movement <= 0.0)
+         break;
+      trendAgeBars++;
+     }
+
+   int aligned10 = 0;
+   int aligned20 = 0;
+   int opposingRun = 0;
+   for(int shift = 1; shift <= 20; shift++)
+     {
+      double movement =
+         direction * (rates[shift].close - rates[shift + 1].close);
+      if(movement > 0.0)
+        {
+         aligned20++;
+         if(shift <= 10)
+           {
+            aligned10++;
+            directionalPressure10 += movement;
+           }
+         opposingRun = 0;
+        }
+      else if(movement < 0.0)
+        {
+         pullbackCount20++;
+         opposingRun++;
+         maxOpposingRun20 = MathMax(maxOpposingRun20, opposingRun);
+         if(shift <= 10)
+            opposingPressure10 += -movement;
+        }
+      else
+         opposingRun = 0;
+     }
+
+   directionalPersistence10 = aligned10 / 10.0;
+   directionalPersistence20 = aligned20 / 20.0;
+   trendEfficiency10 = MlDirectionalEfficiency(direction, rates, 10);
+   trendEfficiency20 = MlDirectionalEfficiency(direction, rates, 20);
+   directionalVelocity1 =
+      direction * (rates[1].close - rates[2].close) / atrPrice;
+   directionalVelocity3 =
+      direction * (rates[1].close - rates[4].close) /
+      (3.0 * atrPrice);
+   directionalVelocity5 =
+      direction * (rates[1].close - rates[6].close) /
+      (5.0 * atrPrice);
+   velocityAcceleration1v3 =
+      directionalVelocity1 - directionalVelocity3;
+   velocityAcceleration3v5 =
+      directionalVelocity3 - directionalVelocity5;
+   directionalPressure10 /= atrPrice;
+   opposingPressure10 /= atrPrice;
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+void MlResetDynamicStructureSnapshot(SMlDynamicStructureSnapshot &snapshot)
+  {
+   snapshot.ready = false;
+   snapshot.supportDistanceAtr = 0.0;
+   snapshot.resistanceDistanceAtr = 0.0;
+   snapshot.directionalRoomAtr = 0.0;
+   snapshot.opposingLevelDistanceAtr = 0.0;
+   snapshot.supportAgeBars = -1;
+   snapshot.resistanceAgeBars = -1;
+   snapshot.supportTouchCount = 0;
+   snapshot.resistanceTouchCount = 0;
+   snapshot.structureWidthAtr = 0.0;
+   snapshot.trappedBetweenLevels = false;
+  }
+
+//+------------------------------------------------------------------+
+bool MlReadDynamicStructure(const int direction,
+                            const double referencePrice,
+                            const double atrPrice,
+                            SMlDynamicStructureSnapshot &snapshot)
+  {
+   MlResetDynamicStructureSnapshot(snapshot);
+   if((direction != 1 && direction != -1) ||
+      referencePrice <= 0.0 || atrPrice <= 0.0)
+      return false;
+
+   ENUM_TIMEFRAMES timeframe = ResolveOriginalStructureTimeframe();
+   int historyBars =
+      MathMax(TS7_ML_V3_PRICE_HISTORY, InpOriginalStructureHistoryBars);
+   int requested = historyBars + InpOriginalStructureLeftBars +
+                   InpOriginalStructureRightBars + 10;
+   MqlRates rates[];
+   ArraySetAsSeries(rates, true);
+   int copied = CopyRates(_Symbol, timeframe, 0, requested, rates);
+   int required = historyBars + InpOriginalStructureLeftBars +
+                  InpOriginalStructureRightBars + 2;
+   if(copied < required)
+      return false;
+
+   double support = EMPTY_VALUE;
+   double resistance = EMPTY_VALUE;
+   int supportShift = -1;
+   int resistanceShift = -1;
+   int newestPivotShift = InpOriginalStructureRightBars + 1;
+   int oldestPivotShift =
+      MathMin(copied - InpOriginalStructureLeftBars - 1,
+              historyBars + InpOriginalStructureRightBars);
+   for(int pivotShift = newestPivotShift;
+       pivotShift <= oldestPivotShift; pivotShift++)
+     {
+      if(IsOriginalStructurePivotHigh(pivotShift, copied, rates) &&
+         rates[pivotShift].high > referencePrice &&
+         (resistance == EMPTY_VALUE ||
+          rates[pivotShift].high < resistance))
+        {
+         resistance = rates[pivotShift].high;
+         resistanceShift = pivotShift;
+        }
+      if(IsOriginalStructurePivotLow(pivotShift, copied, rates) &&
+         rates[pivotShift].low < referencePrice &&
+         (support == EMPTY_VALUE ||
+          rates[pivotShift].low > support))
+        {
+         support = rates[pivotShift].low;
+         supportShift = pivotShift;
+        }
+     }
+   if(support == EMPTY_VALUE || resistance == EMPTY_VALUE ||
+      supportShift < 1 || resistanceShift < 1)
+      return false;
+
+   double tolerance =
+      TS7_ML_V3_STRUCTURE_TOUCH_TOLERANCE_ATR * atrPrice;
+   for(int pivotShift = newestPivotShift;
+       pivotShift <= oldestPivotShift; pivotShift++)
+     {
+      if(IsOriginalStructurePivotHigh(pivotShift, copied, rates) &&
+         MathAbs(rates[pivotShift].high - resistance) <= tolerance)
+         snapshot.resistanceTouchCount++;
+      if(IsOriginalStructurePivotLow(pivotShift, copied, rates) &&
+         MathAbs(rates[pivotShift].low - support) <= tolerance)
+         snapshot.supportTouchCount++;
+     }
+
+   snapshot.supportDistanceAtr =
+      (referencePrice - support) / atrPrice;
+   snapshot.resistanceDistanceAtr =
+      (resistance - referencePrice) / atrPrice;
+   snapshot.directionalRoomAtr =
+      (direction > 0 ? snapshot.resistanceDistanceAtr
+                     : snapshot.supportDistanceAtr);
+   snapshot.opposingLevelDistanceAtr =
+      (direction > 0 ? snapshot.supportDistanceAtr
+                     : snapshot.resistanceDistanceAtr);
+   snapshot.supportAgeBars = supportShift;
+   snapshot.resistanceAgeBars = resistanceShift;
+   snapshot.structureWidthAtr =
+      (resistance - support) / atrPrice;
+   snapshot.trappedBetweenLevels =
+      snapshot.structureWidthAtr <= TS7_ML_V3_TRAPPED_WIDTH_ATR;
+   snapshot.ready =
+      snapshot.supportDistanceAtr > 0.0 &&
+      snapshot.resistanceDistanceAtr > 0.0 &&
+      snapshot.supportTouchCount > 0 &&
+      snapshot.resistanceTouchCount > 0;
+   return snapshot.ready;
+  }
+
+//+------------------------------------------------------------------+
 string MlBuildSetupId(const int direction,
                       const datetime signalTime,
                       const datetime candidateBarTime)
@@ -972,8 +1332,11 @@ string MlRegisterEntryCandidate(const int direction,
 
    MqlRates rates[];
    ArraySetAsSeries(rates, true);
-   int copied = CopyRates(_Symbol, PERIOD_M1, 0, 22, rates);
+   int copied =
+      CopyRates(_Symbol, PERIOD_M1, 0, TS7_ML_V3_PRICE_HISTORY + 2, rates);
    bool ratesReady = (copied >= 22);
+   bool ratesReadyV3 =
+      (copied >= TS7_ML_V3_PRICE_HISTORY + 2);
    double close1 = ratesReady ? rates[1].close : 0.0;
    double returns[5];
    for(int i = 0; i < 5; i++) returns[i] = 0.0;
@@ -1131,6 +1494,53 @@ string MlRegisterEntryCandidate(const int direction,
       adxSnapshotReady && hiloSnapshotReady && psarSnapshotReady &&
       stSnapshotReady && stMtfSnapshotReady;
 
+   double atrRatioMean50 = 0.0;
+   double atrRatioMean200 = 0.0;
+   double atrPercentile200 = 0.0;
+   double atrTrend5 = 0.0;
+   double atrTrend20 = 0.0;
+   double atrShockRatio = 0.0;
+   bool volatilityRegimeReady =
+      ratesReadyV3 &&
+      MlReadVolatilityRegime(rates, copied,
+                             atrRatioMean50, atrRatioMean200,
+                             atrPercentile200, atrTrend5, atrTrend20,
+                             atrShockRatio);
+
+   int trendAgeBars = 0;
+   double directionalPersistence10 = 0.0;
+   double directionalPersistence20 = 0.0;
+   double trendEfficiency10 = 0.0;
+   double trendEfficiency20 = 0.0;
+   int pullbackCount20 = 0;
+   int maxOpposingRun20 = 0;
+   double directionalVelocity1 = 0.0;
+   double directionalVelocity3 = 0.0;
+   double directionalVelocity5 = 0.0;
+   double velocityAcceleration1v3 = 0.0;
+   double velocityAcceleration3v5 = 0.0;
+   double directionalPressure10 = 0.0;
+   double opposingPressure10 = 0.0;
+   bool priceDynamicsReady =
+      ratesReadyV3 && atrM1Ready &&
+      MlReadPriceDynamics(direction, atrM1, rates, copied,
+                          trendAgeBars, directionalPersistence10,
+                          directionalPersistence20, trendEfficiency10,
+                          trendEfficiency20, pullbackCount20,
+                          maxOpposingRun20, directionalVelocity1,
+                          directionalVelocity3, directionalVelocity5,
+                          velocityAcceleration1v3,
+                          velocityAcceleration3v5,
+                          directionalPressure10, opposingPressure10);
+
+   SMlDynamicStructureSnapshot dynamicStructure;
+   bool dynamicStructureReady =
+      MlReadDynamicStructure(direction, referencePrice, atrM1,
+                             dynamicStructure);
+   bool featureReadyV3 =
+      featureReadyV2 && volatilityRegimeReady &&
+      priceDynamicsReady && dynamicStructureReady;
+
    string row =
       TS7_ML_SCHEMA_VERSION + "," +
       MlCsvEscape(g_mlRunId) + "," +
@@ -1227,6 +1637,46 @@ string MlRegisterEntryCandidate(const int direction,
       MlDoubleText(stLineSlopeAtr, 6, stSnapshotReady) + "," +
       MlDoubleText(stMtfDistanceAtr, 6, stMtfSnapshotReady) + "," +
       MlDoubleText(stMtfLineSlopeAtr, 6, stMtfSnapshotReady) + "," +
+      MlBoolText(featureReadyV3) + "," +
+      MlDoubleText(atrRatioMean50, 8, volatilityRegimeReady) + "," +
+      MlDoubleText(atrRatioMean200, 8, volatilityRegimeReady) + "," +
+      MlDoubleText(atrPercentile200, 8, volatilityRegimeReady) + "," +
+      MlDoubleText(atrTrend5, 8, volatilityRegimeReady) + "," +
+      MlDoubleText(atrTrend20, 8, volatilityRegimeReady) + "," +
+      MlDoubleText(atrShockRatio, 8, volatilityRegimeReady) + "," +
+      (priceDynamicsReady ? IntegerToString(trendAgeBars) : "NA") + "," +
+      MlDoubleText(directionalPersistence10, 8, priceDynamicsReady) + "," +
+      MlDoubleText(directionalPersistence20, 8, priceDynamicsReady) + "," +
+      MlDoubleText(trendEfficiency10, 8, priceDynamicsReady) + "," +
+      MlDoubleText(trendEfficiency20, 8, priceDynamicsReady) + "," +
+      (priceDynamicsReady ? IntegerToString(pullbackCount20) : "NA") + "," +
+      (priceDynamicsReady ? IntegerToString(maxOpposingRun20) : "NA") + "," +
+      MlDoubleText(directionalVelocity1, 8, priceDynamicsReady) + "," +
+      MlDoubleText(directionalVelocity3, 8, priceDynamicsReady) + "," +
+      MlDoubleText(directionalVelocity5, 8, priceDynamicsReady) + "," +
+      MlDoubleText(velocityAcceleration1v3, 8, priceDynamicsReady) + "," +
+      MlDoubleText(velocityAcceleration3v5, 8, priceDynamicsReady) + "," +
+      MlDoubleText(directionalPressure10, 8, priceDynamicsReady) + "," +
+      MlDoubleText(opposingPressure10, 8, priceDynamicsReady) + "," +
+      MlDoubleText(dynamicStructure.supportDistanceAtr, 8,
+                   dynamicStructureReady) + "," +
+      MlDoubleText(dynamicStructure.resistanceDistanceAtr, 8,
+                   dynamicStructureReady) + "," +
+      MlDoubleText(dynamicStructure.directionalRoomAtr, 8,
+                   dynamicStructureReady) + "," +
+      MlDoubleText(dynamicStructure.opposingLevelDistanceAtr, 8,
+                   dynamicStructureReady) + "," +
+      (dynamicStructureReady
+       ? IntegerToString(dynamicStructure.supportAgeBars) : "NA") + "," +
+      (dynamicStructureReady
+       ? IntegerToString(dynamicStructure.resistanceAgeBars) : "NA") + "," +
+      (dynamicStructureReady
+       ? IntegerToString(dynamicStructure.supportTouchCount) : "NA") + "," +
+      (dynamicStructureReady
+       ? IntegerToString(dynamicStructure.resistanceTouchCount) : "NA") + "," +
+      MlDoubleText(dynamicStructure.structureWidthAtr, 8,
+                   dynamicStructureReady) + "," +
+      MlBoolText(dynamicStructure.trappedBetweenLevels) + "," +
       MlCsvEscape(InpMlDataIntegrityFlag);
 
    MlWriteRow(g_mlCandidateFile, row);

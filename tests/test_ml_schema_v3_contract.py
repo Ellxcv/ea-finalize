@@ -16,7 +16,7 @@ sys.modules[SPEC.name] = AUDIT
 SPEC.loader.exec_module(AUDIT)
 
 
-class SchemaV2ContractTests(unittest.TestCase):
+class SchemaV3ContractTests(unittest.TestCase):
     def test_mql_header_matches_python_audit_contract(self) -> None:
         source = (
             REPO_ROOT / "Include" / "TS7" / "ML" / "DatasetLogger.mqh"
@@ -25,7 +25,7 @@ class SchemaV2ContractTests(unittest.TestCase):
             r'TS7_ML_SCHEMA_VERSION\s*=\s*"([^"]+)"', source
         )
         self.assertIsNotNone(version)
-        self.assertEqual(version.group(1), AUDIT.SCHEMA_VERSION_V2)
+        self.assertEqual(version.group(1), AUDIT.SCHEMA_VERSION_V3)
 
         header_match = re.search(
             r"string\s+MlCandidateHeader\(\)\s*\{(.*?)"
@@ -37,11 +37,11 @@ class SchemaV2ContractTests(unittest.TestCase):
         literals = re.findall(r'"([^"]*)"', header_match.group(1))
         header = tuple("".join(literals).split(","))
 
-        self.assertEqual(header, AUDIT.CANDIDATE_HEADER_V2)
-        self.assertEqual(len(header), 97)
+        self.assertEqual(header, AUDIT.CANDIDATE_HEADER_V3)
+        self.assertEqual(len(header), 128)
         self.assertEqual(len(header), len(set(header)))
 
-    def test_v2_fields_are_written_by_candidate_row(self) -> None:
+    def test_v3_fields_are_written_by_candidate_row(self) -> None:
         source = (
             REPO_ROOT / "Include" / "TS7" / "ML" / "DatasetLogger.mqh"
         ).read_text(encoding="utf-8")
@@ -70,6 +70,37 @@ class SchemaV2ContractTests(unittest.TestCase):
             "STLineSlopeATR": "stLineSlopeAtr",
             "STMTFDistanceATR": "stMtfDistanceAtr",
             "STMTFLineSlopeATR": "stMtfLineSlopeAtr",
+            "FeatureReadyV3": "featureReadyV3",
+            "AtrRatioMean50": "atrRatioMean50",
+            "AtrRatioMean200": "atrRatioMean200",
+            "AtrPercentile200": "atrPercentile200",
+            "AtrTrend5": "atrTrend5",
+            "AtrTrend20": "atrTrend20",
+            "AtrShockRatio": "atrShockRatio",
+            "TrendAgeBars": "trendAgeBars",
+            "DirectionalPersistence10": "directionalPersistence10",
+            "DirectionalPersistence20": "directionalPersistence20",
+            "TrendEfficiency10": "trendEfficiency10",
+            "TrendEfficiency20": "trendEfficiency20",
+            "PullbackCount20": "pullbackCount20",
+            "MaxOpposingRun20": "maxOpposingRun20",
+            "DirectionalVelocity1": "directionalVelocity1",
+            "DirectionalVelocity3": "directionalVelocity3",
+            "DirectionalVelocity5": "directionalVelocity5",
+            "VelocityAcceleration1v3": "velocityAcceleration1v3",
+            "VelocityAcceleration3v5": "velocityAcceleration3v5",
+            "DirectionalPressure10": "directionalPressure10",
+            "OpposingPressure10": "opposingPressure10",
+            "NearestSupportDistanceATR": "supportDistanceAtr",
+            "NearestResistanceDistanceATR": "resistanceDistanceAtr",
+            "DirectionalLevelRoomATR": "directionalRoomAtr",
+            "OpposingLevelDistanceATR": "opposingLevelDistanceAtr",
+            "SupportAgeBars": "supportAgeBars",
+            "ResistanceAgeBars": "resistanceAgeBars",
+            "SupportTouchCount": "supportTouchCount",
+            "ResistanceTouchCount": "resistanceTouchCount",
+            "StructureWidthATR": "structureWidthAtr",
+            "TrappedBetweenLevels": "trappedBetweenLevels",
         }
         for field, token in expected_tokens.items():
             with self.subTest(field=field):

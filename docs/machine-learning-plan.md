@@ -575,3 +575,9 @@ sebagai hard gate, menuntut nol allowed L4+, dan menambahkan regularized XGBoost
 leader dengan NO_RECOVERY AUC 0,6345, conditional L4 AUC 0,5529, recovery reduction 17,66%, dan
 original WR delta +7,89 pp. Akan tetapi 28 dari 62 L4+ evaluation masih lolos. Model tetap
 development-only; langkah berikutnya adalah feature schema v3 pada periode berkualitas yang sama.
+
+Feature schema v3 sekarang sudah diimplementasikan sebagai observation-only telemetry. Ia
+menambahkan 30 feature volatility regime, trend durability, pre-entry momentum, dan confirmed
+dynamic structure. Lima config staged memastikan setiap family diuji sendiri terhadap compact
+core sebelum digabungkan. Strategy Tester parity dan collection ulang pada dua periode development
+yang sama masih wajib sebelum training v3.
