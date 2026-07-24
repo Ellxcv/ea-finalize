@@ -446,7 +446,10 @@ ketiadaan perubahan trading.
 
 ### Fase 2 — Historical dataset and audit
 
-Status tooling: selesai diimplementasikan. Status data: menunggu historical run retained.
+Status tooling: selesai. Status data awal: run retained `r02` folder 35 lolos audit pada
+2026-07-24 dengan 982 candidate, nol error, dan satu warning data-integrity. Jumlah ini cukup
+untuk diagnosis serta eksplorasi model sederhana, tetapi penambahan development window
+non-overlap masih diperlukan untuk mencapai target awal 2.000–5.000 candidate.
 
 - kumpulkan beberapa periode/regime dengan preset identik;
 - validasi hash, duplicate ID, pairing, missing values, dan label;

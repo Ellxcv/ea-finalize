@@ -2,10 +2,12 @@
 
 ## Status
 
-Tooling audit dan merge sudah diimplementasikan. Run diagnostik pertama (`r01`, folder 34) sudah
-dikumpulkan, tetapi ditolak sebagai retained dataset karena memakai deposit USD 3.000, bukan
-USD 4.000 sesuai kontrak. Historical dataset retained masih menunggu pengulangan `r02` dengan
-source commit dan seluruh artefak yang benar.
+Tooling audit dan merge sudah diimplementasikan. Run diagnostik pertama (`r01`, folder 34) ditolak
+karena memakai deposit USD 3.000. Pengulangan `r02` (folder 35) memakai USD 4.000 dan lolos gate:
+982 candidate retained, nol error, serta satu warning `SYMBOL_MIGRATION_UNVERIFIED`.
+
+Dataset ini cukup untuk diagnosis dan eksplorasi model sederhana Fase 3, tetapi belum mencapai
+target awal penelitian 2.000–5.000 candidate. Final OOS tetap belum dibuka.
 
 Fase 2 tidak melatih model. Outputnya adalah dataset candidate yang sudah lolos gate provenance,
 schema, pairing, label, financial, duplicate, serta analisis rule deskriptif.
