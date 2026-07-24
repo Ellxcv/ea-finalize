@@ -23,6 +23,10 @@ bool ExecuteBuy(const int cciSignalType, const datetime signalTime)
       return false;
      }
    sl = stopContext.stopPrice;
+   double spreadPoints = (_Point > 0.0 ? (ask - bid) / _Point : 0.0);
+   string mlSetupId =
+      MlRegisterEntryCandidate(1, cciSignalType, signalTime,
+                               ask, bid, ask, stopContext);
    double lot = CalculateMainStrategyLot(stopContext.distancePoints * _Point);
    string orderComment = BuildCCIMainOrderComment(InpBuyComment, cciSignalType);
 
@@ -33,11 +37,17 @@ bool ExecuteBuy(const int cciSignalType, const datetime signalTime)
    if(!g_trade.Buy(lot, _Symbol, ask, sl, tp, orderComment))
      {
       CancelOriginalTradeDiagnostic();
+      MlRegisterOrderResult(mlSetupId, 1, ask, lot, sl,
+                            stopContext.distancePoints, tp,
+                            spreadPoints, false);
       Print("ERROR: Buy failed. Error=", g_trade.ResultRetcode(),
             " Desc=", g_trade.ResultRetcodeDescription());
       return false;
      }
 
+   MlRegisterOrderResult(mlSetupId, 1, ask, lot, sl,
+                         stopContext.distancePoints, tp,
+                         spreadPoints, true);
    PrintMainStopLossExecution(1, signalTime, ask, lot, stopContext,
                               g_trade.ResultOrder(), g_trade.ResultDeal());
    Print("INFO: BUY opened. Price=", ask, " SL=", sl, " TP=", tp,
@@ -67,6 +77,10 @@ bool ExecuteSell(const int cciSignalType, const datetime signalTime)
       return false;
      }
    sl = stopContext.stopPrice;
+   double spreadPoints = (_Point > 0.0 ? (ask - bid) / _Point : 0.0);
+   string mlSetupId =
+      MlRegisterEntryCandidate(-1, cciSignalType, signalTime,
+                               bid, bid, ask, stopContext);
    double lot = CalculateMainStrategyLot(stopContext.distancePoints * _Point);
    string orderComment = BuildCCIMainOrderComment(InpSellComment, cciSignalType);
 
@@ -77,11 +91,17 @@ bool ExecuteSell(const int cciSignalType, const datetime signalTime)
    if(!g_trade.Sell(lot, _Symbol, bid, sl, tp, orderComment))
      {
       CancelOriginalTradeDiagnostic();
+      MlRegisterOrderResult(mlSetupId, -1, bid, lot, sl,
+                            stopContext.distancePoints, tp,
+                            spreadPoints, false);
       Print("ERROR: Sell failed. Error=", g_trade.ResultRetcode(),
             " Desc=", g_trade.ResultRetcodeDescription());
       return false;
      }
 
+   MlRegisterOrderResult(mlSetupId, -1, bid, lot, sl,
+                         stopContext.distancePoints, tp,
+                         spreadPoints, true);
    PrintMainStopLossExecution(-1, signalTime, bid, lot, stopContext,
                               g_trade.ResultOrder(), g_trade.ResultDeal());
    Print("INFO: SELL opened. Price=", bid, " SL=", sl, " TP=", tp,

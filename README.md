@@ -61,6 +61,8 @@ Rencana meta-filter entry original tersedia di
 sebagai `folder32_v1` di
 [docs/ml-folder32-v1-baseline.md](docs/ml-folder32-v1-baseline.md). Implementasi ML harus dimulai
 dari logger observation-only dan tidak boleh mengubah keputusan trading baseline.
+Kontrak output logger Fase 1 tersedia di
+[docs/ml-entry-candidate-v1-schema.md](docs/ml-entry-candidate-v1-schema.md).
 
 ## Status publikasi
 

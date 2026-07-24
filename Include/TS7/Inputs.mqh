@@ -35,6 +35,16 @@ input int    InpOriginalStructureLeftBars = 10;       // Older bars required to 
 input int    InpOriginalStructureRightBars = 10;      // Closed newer bars required to confirm a pivot
 input int    InpOriginalStructureHistoryBars = 1500;  // Bars scanned for structure state
 
+input group "ML Dataset Logger (Observation Only)"
+input bool   InpEnableMlDatasetLogger = false;         // Export candidate/outcome CSV without changing trades
+input string InpMlStrategyVersion = "folder32_v1";     // Frozen strategy/preset identifier
+input string InpMlSourceRevision = "";                 // Git commit/tag used to build this EA
+input string InpMlPresetHash = "737EF0B78C358EE2D98BD54BA82F06E6C67010E09A12B95E2F05F061438C1651"; // Frozen preset SHA-256
+input string InpMlRunId = "";                          // Optional unique run ID (empty=auto)
+input string InpMlDatasetDirectory = "TS7_ML";         // Relative Terminal Common Files directory
+input string InpMlDataIntegrityFlag = "SYMBOL_MIGRATION_UNVERIFIED"; // Dataset provenance flag
+input int    InpMlFlushEveryRecords = 50;              // Flush CSV buffers every N written records
+
 input group "Late Confirmation Guard"
 input bool   InpEnableLateConfirmationGuard = false;  // Block symmetric HiLo+ST M1 late-confirm pattern
 

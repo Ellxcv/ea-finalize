@@ -27,6 +27,9 @@ struct SHandles
    int distEmaSlow;
    int originalDiagATR;
    int originalDiagEMA;
+   int mlBarrierATR;
+   int mlATR_M5;
+   int mlEMA;
 
    SHandles()
      {
@@ -50,6 +53,9 @@ struct SHandles
       distEmaSlow = INVALID_HANDLE;
       originalDiagATR = INVALID_HANDLE;
       originalDiagEMA = INVALID_HANDLE;
+      mlBarrierATR = INVALID_HANDLE;
+      mlATR_M5 = INVALID_HANDLE;
+      mlEMA = INVALID_HANDLE;
      }
   };
 

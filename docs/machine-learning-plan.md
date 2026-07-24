@@ -6,7 +6,7 @@
 - Baseline strategi: `folder32_v1`.
 - Schema dataset awal: `ts7_entry_candidate_v1`.
 - Scope model pertama: meta-filter/veto entry original.
-- Perilaku trading: belum berubah; implementasi source dimulai pada Fase 1.
+- Perilaku trading: tidak berubah; logger Fase 1 bersifat observation-only dan default OFF.
 
 Dokumen ini adalah spesifikasi normatif. Handoff
 [ea-ml-roadmap-context.md](ea-ml-roadmap-context.md) menjadi sumber konteks, tetapi tidak
@@ -183,7 +183,8 @@ Status:
 - `ADVERSE_FIRST`;
 - `UNRESOLVED`;
 - `AMBIGUOUS`;
-- `LABEL_DATA_ERROR`.
+- `LABEL_DATA_ERROR`;
+- `HORIZON_INCOMPLETE` bila EA/tester berhenti sebelum horizon berakhir.
 
 Primary horizon dimulai pada tick candidate dan berakhir pada penutupan candle M1 ke-50, dengan
 candle yang baru dibuka saat candidate dihitung sebagai candle pertama. Sensitivity horizon
@@ -298,7 +299,7 @@ keadaan recovery.
 
 ## 11. File data
 
-Logger Fase 1 akan menghasilkan file terpisah:
+Logger Fase 1 menghasilkan file terpisah:
 
 ~~~text
 candidate_setups.csv
@@ -428,6 +429,8 @@ Status: selesai.
 
 ### Fase 1 — Data contract and observation-only logger
 
+Status: selesai diimplementasikan dan lolos short real-tick regression pada 2026-07-24.
+
 - buat schema CSV/JSON resmi;
 - implementasikan `StrategyVersion`, `RunId`, `SetupId`, dan `CycleId`;
 - simpan trigger state, confirmation latency, dan candidate feature;
@@ -435,6 +438,11 @@ Status: selesai.
 - implementasikan real-tick barrier tracker 40/50;
 - validasi missing value dan reason code;
 - buktikan logger ON/OFF menghasilkan history trade identik.
+
+Kontrak field final tersedia di
+[ml-entry-candidate-v1-schema.md](ml-entry-candidate-v1-schema.md). Pengumpulan historical dataset
+panjang tetap menjadi Fase 2; short regression Fase 1 hanya membuktikan integritas logger dan
+ketiadaan perubahan trading.
 
 ### Fase 2 — Historical dataset and audit
 

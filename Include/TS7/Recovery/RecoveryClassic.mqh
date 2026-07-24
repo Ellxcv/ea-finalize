@@ -161,7 +161,7 @@ void OnClassicRecoveryCycleEnd(const double cycleProfit)
      {
       Print("INFO: [CLASSIC_DONE] Recovery completed. Secured=", DoubleToString(g_recoverySecuredProfit, 2),
             " TotalTarget=", DoubleToString(g_recoveryTotalTarget, 2));
-      ResetRecoveryState();
+      ResetRecoveryState("CLASSIC_TARGET_REACHED");
       return;
      }
 

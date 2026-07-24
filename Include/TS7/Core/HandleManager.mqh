@@ -284,6 +284,22 @@ bool CreateAllHandles(SHandles &handles)
         }
      }
 
+//--- Observation-only handles for the frozen ML entry-candidate schema
+   if(InpEnableMlDatasetLogger)
+     {
+      handles.mlBarrierATR = iATR(_Symbol, PERIOD_M1, 14);
+      handles.mlATR_M5 = iATR(_Symbol, PERIOD_M5, 14);
+      handles.mlEMA = iMA(_Symbol, PERIOD_M1, 50, 0, MODE_EMA, PRICE_CLOSE);
+      if(handles.mlBarrierATR == INVALID_HANDLE ||
+         handles.mlATR_M5 == INVALID_HANDLE ||
+         handles.mlEMA == INVALID_HANDLE)
+        {
+         Print("ERROR: [ML_DATASET] Failed creating ATR/EMA handles. Error=",
+               GetLastError());
+         return false;
+        }
+     }
+
    return true;
   }
 
@@ -309,6 +325,9 @@ void ReleaseAllHandles(SHandles &handles)
    if(handles.distEmaSlow != INVALID_HANDLE) { IndicatorRelease(handles.distEmaSlow); handles.distEmaSlow = INVALID_HANDLE; }
    if(handles.originalDiagATR != INVALID_HANDLE) { IndicatorRelease(handles.originalDiagATR); handles.originalDiagATR = INVALID_HANDLE; }
    if(handles.originalDiagEMA != INVALID_HANDLE) { IndicatorRelease(handles.originalDiagEMA); handles.originalDiagEMA = INVALID_HANDLE; }
+   if(handles.mlBarrierATR != INVALID_HANDLE) { IndicatorRelease(handles.mlBarrierATR); handles.mlBarrierATR = INVALID_HANDLE; }
+   if(handles.mlATR_M5 != INVALID_HANDLE) { IndicatorRelease(handles.mlATR_M5); handles.mlATR_M5 = INVALID_HANDLE; }
+   if(handles.mlEMA != INVALID_HANDLE) { IndicatorRelease(handles.mlEMA); handles.mlEMA = INVALID_HANDLE; }
   }
 
 #endif // TS7_CORE_HANDLE_MANAGER_MQH

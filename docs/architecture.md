@@ -8,6 +8,7 @@ testing_strat_7.mq5
     +-- Include/TS7/Signals/    pembacaan dan konfirmasi sinyal
     +-- Include/TS7/Filters/    filter waktu dan sesi
     +-- Include/TS7/Diagnostics/ telemetry observasi tanpa keputusan trading
+    +-- Include/TS7/ML/          dataset candidate, trade/cycle, dan barrier
     +-- Include/TS7/Recovery/   mode dan state machine recovery
     |
     +-- MQL5/Indicators/*       custom indicator runtime eksternal
@@ -23,9 +24,22 @@ berada pada lokasi standar MQL5/Indicators karena iCustom mencarinya saat runtim
 - Signals: normalisasi buffer indikator menjadi keputusan sinyal.
 - Filters: aturan waktu perdagangan dan sesi.
 - Diagnostics: pengukuran entry original seperti MFE/MAE, ATR, range candle, dan spread.
+- ML: logger observation-only untuk candidate, actual outcome, recovery cycle, dan barrier 40/50.
 - Recovery: state serta implementasi Classic, Trend, Start Reverse, Grid, dan Distance.
 - Inputs.mqh: konfigurasi pengguna yang tampil pada properti EA.
 - GlobalState.mqh: state dan handle bersama yang dibutuhkan lintas modul.
+
+## ML dataset logger
+
+`ML/DatasetLogger.mqh` aktif hanya jika `InpEnableMlDatasetLogger=true`. Candidate dicatat setelah
+seluruh legacy guard dan perhitungan initial SL lolos, tepat sebelum lot/order. Modul ini tidak
+memberi allow/reject dan tidak menyentuh aturan entry, exit, trailing, lot, ataupun recovery.
+
+File ditulis ke MetaTrader Terminal Common Files, bukan repository. Relasi record memakai
+`RunId`, `SetupId`, `CycleId`, dan `PositionId`. Barrier tracker berjalan per tick dengan horizon
+40/50 candle M1; financial original dan recovery dijumlahkan dari history deal per posisi. Kontrak
+field dan aturan missing value tersedia di
+[ml-entry-candidate-v1-schema.md](ml-entry-candidate-v1-schema.md).
 
 ## Initial stop loss original strategy
 

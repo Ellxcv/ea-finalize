@@ -98,7 +98,7 @@ const string REC_ZONE_L_LINE      = "TS7_REC_ZL";
 bool IsRecoveryComment(const string comment);
 bool DeleteRecoveryPendingOrders();
 void DeleteRecoveryLines();
-void ResetRecoveryState();
+void ResetRecoveryState(const string completionReason = "RESET");
 int GetRecoveryTrendDirection();
 int GetClassicRecoveryTrendDirection();
 
@@ -119,6 +119,7 @@ int GetClassicRecoveryTrendDirection();
 #include "Include/TS7/Core/RiskManager.mqh"
 #include "Include/TS7/Diagnostics/MarketStructureDiagnostics.mqh"
 #include "Include/TS7/Diagnostics/OriginalTradeDiagnostics.mqh"
+#include "Include/TS7/ML/DatasetLogger.mqh"
 #include "Include/TS7/Filters/LateConfirmationGuard.mqh"
 #include "Include/TS7/Core/OrderExecutor.mqh"
 #include "Include/TS7/Core/TrailingStop.mqh"
@@ -227,6 +228,8 @@ int OnInit()
       return(INIT_PARAMETERS_INCORRECT);
    if(!ValidateLateConfirmationGuardInputs())
       return(INIT_PARAMETERS_INCORRECT);
+   if(!MlValidateLoggerInputs())
+      return(INIT_PARAMETERS_INCORRECT);
 
 //--- Init symbol info
    if(!g_symbolInfo.Name(_Symbol))
@@ -255,6 +258,11 @@ int OnInit()
    ResetMainStopLossDiagnostics();
    ResetOriginalTradeDiagnostics();
    ResetLateConfirmationGuard();
+   if(!MlInitializeDatasetLogger())
+     {
+      ReleaseAllHandles(g_handles);
+      return(INIT_FAILED);
+     }
 
    Print("INFO: testing_strat_7 initialized OK. Magic=", InpMagicNumber,
          " CCISignalMode=", EnumToString(InpCciSignalMode));
@@ -270,6 +278,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
+   MlShutdownDatasetLogger(reason);
    PrintMainStopLossSummary();
    PrintOriginalTradeDiagnosticsSummary();
    PrintLateConfirmationGuardSummary();
@@ -284,6 +293,9 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
+//--- Observation-only candidate barrier and trade excursion tracking
+   MlUpdateDatasetLoggerOnTick();
+
 //--- Observation-only original-trade excursion tracking
    UpdateOriginalTradeDiagnostics();
 
@@ -317,7 +329,7 @@ void OnTick()
         {
          CloseAllEAOpenPositions();
          if(g_recoveryActive)
-            ResetRecoveryState();
+            ResetRecoveryState("DAILY_DRAWDOWN");
          return;
         }
      }
@@ -700,6 +712,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
 
    if(dealEntry == DEAL_ENTRY_IN)
      {
+      MlObserveEntryDealTransaction(trans.deal, dealComment);
       RegisterOriginalTradeDiagnosticFromEntryDeal(trans.deal, dealComment);
       return;
      }
@@ -717,9 +730,11 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
    if(!isRecovery && IsRecoveryComment(dealComment))
       isRecovery = true;
    bool isStrategy = !isRecovery;
+   int mlTradeIndex = -1;
    if(isStrategy)
      {
       FinalizeOriginalTradeDiagnostic(trans.deal, profit, dealReason);
+      mlTradeIndex = MlRegisterOriginalClose(trans.deal, dealReason);
 
       // DEAL_TYPE_SELL on OUT = closing BUY, DEAL_TYPE_BUY on OUT = closing SELL
       if(dealType == DEAL_TYPE_SELL)
@@ -763,6 +778,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
         {
          Print("INFO: Recovery start blocked by short restart guard. Guard until ",
                TimeToString(g_recoveryRestartGuardUntil));
+         MlFinalizeNoRecovery(mlTradeIndex, "RECOVERY_RESTART_GUARD");
          return;
         }
 
@@ -774,11 +790,22 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
            {
             Print("INFO: Recovery start blocked by cooldown. Loss ignored. Cooldown until ",
                   TimeToString(g_recoveryCooldownUntil));
+            MlFinalizeNoRecovery(mlTradeIndex, "RECOVERY_COOLDOWN");
             return;
            }
         }
       StartRecoveryFromLossDeal(trans.deal);
+      if(g_recoveryActive || g_recoveryPendingStart)
+         MlMarkRecoveryStarted(trans.deal);
+      else
+         MlFinalizeNoRecovery(mlTradeIndex, "RECOVERY_NOT_STARTED");
+      return;
      }
+
+   if(isStrategy)
+      MlFinalizeNoRecovery(mlTradeIndex,
+                           (profit < 0.0 ? "RECOVERY_DISABLED" :
+                            "ORIGINAL_COMPLETED"));
   }
 
 //+------------------------------------------------------------------+
