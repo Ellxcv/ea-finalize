@@ -1,0 +1,21 @@
+{
+  "config_version": "ts7_ml_phase3_feature_diagnostics_v1",
+  "dataset_schema": "ts7_entry_candidate_v1",
+  "minimum_rows": 500,
+  "minimum_runs": 2,
+  "minimum_group_rows": 20,
+  "minimum_run_auc_separation": 0.03,
+  "high_correlation_threshold": 0.9,
+  "barrier_label": {
+    "column": "Barrier50Outcome",
+    "positive": "FAVORABLE_FIRST",
+    "negative": "ADVERSE_FIRST"
+  },
+  "business_labels": {
+    "no_recovery": "NO_RECOVERY",
+    "l4_plus": "RECOVERY_L4_PLUS"
+  },
+  "additional_categorical_features": [
+    "Direction"
+  ]
+}

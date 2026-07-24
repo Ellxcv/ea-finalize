@@ -132,6 +132,11 @@ threshold tidak dibekukan, dan final OOS `2026.05.03–2026.07.18` tetap belum d
 Catatan eksperimen lengkap:
 [CCI validity 3 Phase 3 record](../tuning/runs/2026-07-24_GOLD-i_M1_cci-validity3-ml-phase3/RECORD.md).
 
+Diagnosis lanjutan membuktikan label barrier-50 tetap selaras dengan outcome bisnis pada kedua
+development run, tetapi feature individual lemah dan memiliki 14 pasangan korelasi absolut
+minimal 0,90. Kontrak, command, dan hasil tersedia di
+[ml-phase3-feature-diagnostics.md](ml-phase3-feature-diagnostics.md).
+
 ## Interpretasi dan langkah berikutnya
 
 Hasil lemah belum membuktikan ML tidak berguna. Dataset 982 candidate berada pada batas eksplorasi

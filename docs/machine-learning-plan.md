@@ -476,6 +476,11 @@ tetap challenger. Training ulang Phase 3 sudah selesai: Logistic Regression dan 
 Forest hanya menghasilkan ROC-AUC sekitar 0,49 dan sama-sama menolak 6,45% L4+, jauh di bawah gate
 20%. Tidak ada model/threshold yang dibekukan dan final OOS `2026.05.03–2026.07.18` belum dibuka.
 
+Feature diagnostic berikutnya menunjukkan label barrier-50 tetap selaras dengan no-recovery dan
+L4+ pada kedua run. Hambatan utama berada pada feature: hanya tujuh sinyal univariate lemah yang
+stabil dan ada 14 pasangan feature berkorelasi absolut minimal 0,90. Label dipertahankan; langkah
+berikutnya adalah revisi/reduksi feature di development stage, bukan membuka final OOS.
+
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;
 - latih Logistic Regression dan tree challengers;
