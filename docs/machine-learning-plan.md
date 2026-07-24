@@ -446,10 +446,15 @@ ketiadaan perubahan trading.
 
 ### Fase 2 — Historical dataset and audit
 
+Status tooling: selesai diimplementasikan. Status data: menunggu historical run retained.
+
 - kumpulkan beberapa periode/regime dengan preset identik;
 - validasi hash, duplicate ID, pairing, missing values, dan label;
 - audit discontinuity symbol;
 - analisis rule sederhana sebelum ML.
+
+Workflow, collection context, gate, dan command tersedia di
+[ml-phase2-dataset-audit.md](ml-phase2-dataset-audit.md).
 
 ### Fase 3 — Offline baseline models
 

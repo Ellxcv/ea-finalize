@@ -63,6 +63,8 @@ sebagai `folder32_v1` di
 dari logger observation-only dan tidak boleh mengubah keputusan trading baseline.
 Kontrak output logger Fase 1 tersedia di
 [docs/ml-entry-candidate-v1-schema.md](docs/ml-entry-candidate-v1-schema.md).
+Pipeline historical dataset Fase 2 tersedia di
+[docs/ml-phase2-dataset-audit.md](docs/ml-phase2-dataset-audit.md).
 
 ## Status publikasi
 

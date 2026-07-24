@@ -21,6 +21,8 @@ NewFile.mqh
 *.user
 .DS_Store
 Thumbs.db
+__pycache__/
+*.py[cod]
 
 # Tester/runtime artifacts
 /logs/
