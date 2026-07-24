@@ -472,7 +472,9 @@ challenger strategi terpisah. Challenger tidak boleh digabung dengan dataset/mod
 Hasil challenger validity 3: folder 39–40 lolos audit dengan 1.080 candidate, sedangkan folder 38
 ditolak karena history quality 16% dan margin-call termination. Validity 3 menyelesaikan window
 Sep–Jan, tetapi pada Jan–Mei tidak memperbaiki original win rate/L4+ dibanding validity 5. Status
-tetap challenger dan model belum dilatih ulang.
+tetap challenger. Training ulang Phase 3 sudah selesai: Logistic Regression dan shallow Random
+Forest hanya menghasilkan ROC-AUC sekitar 0,49 dan sama-sama menolak 6,45% L4+, jauh di bawah gate
+20%. Tidak ada model/threshold yang dibekukan dan final OOS `2026.05.03–2026.07.18` belum dibuka.
 
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;

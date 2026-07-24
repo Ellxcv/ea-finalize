@@ -114,6 +114,24 @@ performanya pada dasarnya setara tebakan acak:
 Karena itu tidak ada model atau threshold yang dibekukan. Hasil ini bukan alasan mengaktifkan
 `ML_SHADOW`/`ML_FILTER`.
 
+## Hasil challenger CCI validity 3
+
+Dataset folder 39–40 yang lolos audit (1.080 candidate) sudah dijalankan melalui pipeline yang
+sama. Folder 38 tidak disertakan karena history quality 16% dan margin-call termination.
+
+| Model | ROC-AUC | PR-AUC | Log loss | Brier | Winner rejected | L4+ rejected |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Logistic Regression | 0,4890 | 0,4316 | 0,7045 | 0,2549 | 7,43% | 6,45% |
+| Shallow Random Forest | 0,4884 | 0,4424 | 0,6956 | 0,2512 | 6,00% | 6,45% |
+
+Random Forest menjadi exploratory champion berdasarkan Brier/log loss, tetapi kedua model tetap
+setara atau lebih buruk dari ranking acak. Kenaikan original win rate terbaik hanya `+0,11 pp`
+dan pengurangan recovery rate relatif hanya `0,26%`; keduanya jauh di bawah gate. Model dan
+threshold tidak dibekukan, dan final OOS `2026.05.03–2026.07.18` tetap belum dibuka.
+
+Catatan eksperimen lengkap:
+[CCI validity 3 Phase 3 record](../tuning/runs/2026-07-24_GOLD-i_M1_cci-validity3-ml-phase3/RECORD.md).
+
 ## Interpretasi dan langkah berikutnya
 
 Hasil lemah belum membuktikan ML tidak berguna. Dataset 982 candidate berada pada batas eksplorasi

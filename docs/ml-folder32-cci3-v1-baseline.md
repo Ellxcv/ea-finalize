@@ -12,6 +12,10 @@ Folder 39 dan 40 sudah lolos audit dengan total 1.080 candidate. Folder 38 ditol
 quality hanya 16% dan run berhenti dengan incomplete L10 recovery. Pada window Jan–Mei yang dapat
 dibandingkan langsung, validity 3 tidak meningkatkan original win rate atau menurunkan L4+ rate.
 
+Eksperimen ML Phase 3 pada folder 39–40 juga tidak lolos gate. ROC-AUC kedua baseline sekitar
+0,49, L4+ rejection hanya 6,45%, dan tidak ada model/threshold yang dibekukan. Final OOS
+`2026.05.03–2026.07.18` tetap tersegel.
+
 ## Satu-satunya perubahan strategi
 
 ~~~text
