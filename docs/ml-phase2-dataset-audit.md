@@ -96,6 +96,8 @@ python tools/ml/create_collection_context.py `
   --bars <jumlah-bars> `
   --ticks <jumlah-ticks> `
   --deal-events <jumlah-deal-events> `
+  --history-quality-percent 100 `
+  --termination-status COMPLETED `
   --preset "C:\path\folder32-v1.set" `
   --ea-ex5 "C:\path\testing_strat_7.ex5" `
   --report "C:\path\report.htm" `
@@ -137,6 +139,7 @@ Run ditolak seluruhnya bila menemukan error:
 - strategy, preset, symbol, timeframe, atau barrier contract mismatch;
 - context, artifact hash, dependency hash, atau tester metadata hilang;
 - window test, initial deposit, currency, atau leverage berbeda dari audit config;
+- history quality di bawah minimum atau termination status tidak diterima oleh audit config;
 - bukan real-tick model;
 - duplicate key dalam run;
 - orphan/missing pairing candidate-entry-trade-cycle-barrier;

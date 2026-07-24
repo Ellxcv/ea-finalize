@@ -309,6 +309,25 @@ class DatasetAuditTests(unittest.TestCase):
         issues = (self.root / "rejected" / "audit_issues.csv").read_text()
         self.assertIn("TEST_WINDOW_MISMATCH", issues)
 
+    def test_quality_and_termination_contract_rejects_bad_run(self) -> None:
+        raw_root = self.root / "raw"
+        raw_root.mkdir()
+        run_dir = create_run(raw_root, "run-a")
+        context_path = run_dir / "collection_context.json"
+        context = json.loads(context_path.read_text(encoding="utf-8"))
+        context["tester"]["history_quality_percent"] = 16.0
+        context["tester"]["termination_status"] = "MARGIN_CALL"
+        context_path.write_text(json.dumps(context), encoding="utf-8")
+        self.config["minimum_history_quality_percent"] = 99.0
+        self.config["accepted_termination_statuses"] = ["COMPLETED"]
+
+        report = self.run_audit(raw_root)
+
+        self.assertGreaterEqual(report["totals"]["errors"], 2)
+        issues = (self.root / "processed" / "audit_issues.csv").read_text()
+        self.assertIn("HISTORY_QUALITY_BELOW_MINIMUM", issues)
+        self.assertIn("TERMINATION_STATUS_REJECTED", issues)
+
     def test_identical_cross_run_duplicate_keeps_first(self) -> None:
         raw_root = self.root / "raw"
         raw_root.mkdir()

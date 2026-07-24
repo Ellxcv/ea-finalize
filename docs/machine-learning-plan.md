@@ -469,6 +469,11 @@ Development window validity 5 pada 2025.09.01–2026.01.03 kemudian mengalami pr
 call pada 2025.09.09. Phase 3 training tambahan ditunda sementara `folder32_cci3_v1` diuji sebagai
 challenger strategi terpisah. Challenger tidak boleh digabung dengan dataset/model `folder32_v1`.
 
+Hasil challenger validity 3: folder 39–40 lolos audit dengan 1.080 candidate, sedangkan folder 38
+ditolak karena history quality 16% dan margin-call termination. Validity 3 menyelesaikan window
+Sep–Jan, tetapi pada Jan–Mei tidak memperbaiki original win rate/L4+ dibanding validity 5. Status
+tetap challenger dan model belum dilatih ulang.
+
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;
 - latih Logistic Regression dan tree challengers;

@@ -201,6 +201,19 @@ def validate_config(config: Mapping[str, Any]) -> None:
         raise AuditFailure("expected_currency is required")
     if not str(config["expected_leverage"]).strip():
         raise AuditFailure("expected_leverage is required")
+    if "minimum_history_quality_percent" in config:
+        minimum_quality = parse_float(str(config["minimum_history_quality_percent"]))
+        if minimum_quality is None or minimum_quality < 0 or minimum_quality > 100:
+            raise AuditFailure("minimum_history_quality_percent must be between 0 and 100")
+    if "accepted_termination_statuses" in config:
+        statuses = config["accepted_termination_statuses"]
+        allowed_statuses = {"COMPLETED", "EARLY_STOP", "MARGIN_CALL", "UNKNOWN"}
+        if (
+            not isinstance(statuses, list)
+            or not statuses
+            or any(status not in allowed_statuses for status in statuses)
+        ):
+            raise AuditFailure("accepted_termination_statuses is invalid")
     if set(int(value) for value in config["required_barrier_horizons"]) != {40, 50}:
         raise AuditFailure("required_barrier_horizons must contain exactly 40 and 50")
     if config["duplicate_policy"] != "keep_first_identical":
@@ -504,6 +517,33 @@ def validate_collection_context(audit: RunAudit, config: Mapping[str, Any]) -> N
                 "ERROR",
                 "TESTER_LEVERAGE_MISMATCH",
                 f"Expected {config['expected_leverage']!r}, found {tester.get('leverage')!r}",
+            )
+    if "minimum_history_quality_percent" in config:
+        actual_quality = parse_float(str(tester.get("history_quality_percent", "")))
+        minimum_quality = float(config["minimum_history_quality_percent"])
+        if actual_quality is None:
+            add_issue(
+                audit,
+                "ERROR",
+                "HISTORY_QUALITY_MISSING",
+                "history_quality_percent is required by the audit config",
+            )
+        elif actual_quality < minimum_quality:
+            add_issue(
+                audit,
+                "ERROR",
+                "HISTORY_QUALITY_BELOW_MINIMUM",
+                f"Required at least {minimum_quality:.2f}%, found {actual_quality:.2f}%",
+            )
+    if "accepted_termination_statuses" in config:
+        termination_status = str(tester.get("termination_status", ""))
+        if termination_status not in config["accepted_termination_statuses"]:
+            add_issue(
+                audit,
+                "ERROR",
+                "TERMINATION_STATUS_REJECTED",
+                f"Expected one of {config['accepted_termination_statuses']}, "
+                f"found {termination_status!r}",
             )
 
     artifacts = context.get("artifacts")
@@ -1302,6 +1342,10 @@ def audit_dataset(
                 "TestFrom": tester_context.get("from", ""),
                 "TestTo": tester_context.get("to", ""),
                 "TesterModel": tester_context.get("model", ""),
+                "HistoryQualityPercent": tester_context.get(
+                    "history_quality_percent", ""
+                ),
+                "TerminationStatus": tester_context.get("termination_status", ""),
                 "InitialDeposit": tester_context.get("initial_deposit", ""),
                 "FinalBalance": tester_context.get("final_balance", ""),
                 "EAEX5SHA256": (

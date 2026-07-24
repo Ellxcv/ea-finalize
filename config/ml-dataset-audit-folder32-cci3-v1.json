@@ -21,6 +21,10 @@
   "expected_initial_deposit": 4000.0,
   "expected_currency": "USD",
   "expected_leverage": "1:500",
+  "minimum_history_quality_percent": 99.0,
+  "accepted_termination_statuses": [
+    "COMPLETED"
+  ],
   "source_revision_pattern": "^[0-9a-fA-F]{7,40}$",
   "require_collection_context": true,
   "required_tester_model": "EVERY_TICK_BASED_ON_REAL_TICKS",

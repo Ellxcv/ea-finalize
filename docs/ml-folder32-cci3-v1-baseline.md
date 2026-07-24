@@ -2,11 +2,15 @@
 
 ## Status
 
-`CHALLENGER_UNVALIDATED`
+`CHALLENGER_PARTIALLY_VALIDATED — NOT PROMOTED`
 
 Challenger ini dibuat setelah `folder32_v1` validity 5 mengalami practical margin call pada
 development window 2025.09.01–2026.01.03. Ia belum menggantikan baseline ML, belum boleh digabung
 dengan dataset `folder32_v1`, dan belum membatalkan hasil Phase 3 sebelumnya.
+
+Folder 39 dan 40 sudah lolos audit dengan total 1.080 candidate. Folder 38 ditolak karena history
+quality hanya 16% dan run berhenti dengan incomplete L10 recovery. Pada window Jan–Mei yang dapat
+dibandingkan langsung, validity 3 tidak meningkatkan original win rate atau menurunkan L4+ rate.
 
 ## Satu-satunya perubahan strategi
 

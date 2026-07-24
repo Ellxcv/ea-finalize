@@ -70,6 +70,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bars", type=int)
     parser.add_argument("--ticks", type=int)
     parser.add_argument("--deal-events", type=int)
+    parser.add_argument("--history-quality-percent", type=float)
+    parser.add_argument(
+        "--termination-status",
+        choices=("COMPLETED", "EARLY_STOP", "MARGIN_CALL", "UNKNOWN"),
+        default="UNKNOWN",
+    )
     parser.add_argument("--preset", type=Path, required=True)
     parser.add_argument("--ea-ex5", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
@@ -104,6 +110,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise ValueError("--initial-deposit must be finite and > 0")
         if not math.isfinite(args.final_balance):
             raise ValueError("--final-balance must be finite")
+        if (
+            args.history_quality_percent is not None
+            and (
+                not math.isfinite(args.history_quality_percent)
+                or args.history_quality_percent < 0
+                or args.history_quality_percent > 100
+            )
+        ):
+            raise ValueError("--history-quality-percent must be between 0 and 100")
         if args.candidate_count < 0:
             raise ValueError("--candidate-count cannot be negative")
         dependency_names = [name for name, _ in args.dependency]
@@ -128,6 +143,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "bars": args.bars,
                 "ticks": args.ticks,
                 "deal_events": args.deal_events,
+                "history_quality_percent": args.history_quality_percent,
+                "termination_status": args.termination_status,
             },
             "artifacts": {
                 "preset": artifact(args.preset),
