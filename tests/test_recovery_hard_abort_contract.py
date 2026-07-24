@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 import unittest
 from pathlib import Path
@@ -44,6 +45,24 @@ class RecoveryHardAbortContractTests(unittest.TestCase):
         self.assertIn("g_recoveryHardAbortPending", manager)
         self.assertIn("ContinueRecoveryHardAbortCleanup();", manager)
         self.assertIn("IsRecoveryComment(g_positionInfo.Comment())", utils)
+
+    def test_observation_preset_references_exact_strategy_preset(self) -> None:
+        preset_dir = (
+            REPO_ROOT
+            / "tuning"
+            / "runs"
+            / "2026-07-24_GOLD-i_M1_recovery-hard-abort-before-level"
+            / "presets"
+        )
+        strategy = preset_dir / "folder32-cci3-recovery-abort-l4-strategy.set"
+        observation = (
+            preset_dir / "folder32-cci3-recovery-abort-l4-observation-on.set"
+        )
+
+        strategy_hash = hashlib.sha256(strategy.read_bytes()).hexdigest().upper()
+        observation_text = observation.read_text(encoding="utf-8-sig")
+        self.assertIn("InpRecoveryAbortBeforeLevel=4", observation_text)
+        self.assertIn(f"InpMlPresetHash={strategy_hash}", observation_text)
 
 
 if __name__ == "__main__":

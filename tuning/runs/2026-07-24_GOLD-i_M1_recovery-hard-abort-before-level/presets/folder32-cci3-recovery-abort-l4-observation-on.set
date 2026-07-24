@@ -1,0 +1,179 @@
+﻿; saved on 2026.07.24 00:55:03
+; this file contains input parameters for testing/optimizing testing_strat_7 expert advisor
+; to use it in the strategy tester, click Load in the context menu of the Inputs tab
+;
+; Trading Setup
+InpLotSize=0.01||0.01||0.001000||0.100000||N
+InpMainLotMode=0||0||0||1||N
+InpMainRiskPercent=1||1.0||0.100000||10.000000||N
+InpEnableBuy=true||false||0||true||N
+InpEnableSell=true||false||0||true||N
+InpMaxBuyPositions=1||1||1||10||N
+InpMaxSellPositions=1||1||1||10||N
+InpCciSignalValidityBars=3||6||1||60||N
+InpCciSignalMode=0||0||0||2||N
+InpMainPositionMode=0||0||0||1||N
+InpMainSignalReentryMode=0||0||0||1||N
+; CCI Settings
+InpCciLength=11||11||1||110||N
+InpCiLength=5||5||1||50||N
+; Original Trade Diagnostics
+InpEnableOriginalTradeDiagnostics=true||false||0||true||N
+InpOriginalDiagAtrPeriod=14||14||1||140||N
+InpOriginalDiagEmaPeriod=50||50||1||500||N
+InpEnableOriginalStructureDiagnostics=true||false||0||true||N
+InpOriginalStructureTimeframe=5||0||0||49153||N
+InpOriginalStructureLeftBars=10||10||1||100||N
+InpOriginalStructureRightBars=10||10||1||100||N
+InpOriginalStructureHistoryBars=1500||1500||1||15000||N
+; Late Confirmation Guard
+InpEnableLateConfirmationGuard=false||false||0||true||N
+; SuperTrend Settings
+InpUseMainSuperTrendFilter=true||false||0||true||N
+InpSuperTrendAtrPeriod=70||50||1||500||N
+InpSuperTrendMultiplier=2.0||1.5||0.150000||15.000000||N
+InpSuperTrendChangeAtrMethod=true||false||0||true||N
+InpMainSuperTrendTimeframe=0||0||0||49153||N
+; Parabolic SAR Settings
+InpUseMainPsarFilter=true||false||0||true||N
+InpPsarStart=0.01||0.02||0.002000||0.200000||N
+InpPsarIncrement=0.01||0.02||0.002000||0.200000||N
+InpPsarMaximum=0.1||0.2||0.020000||2.000000||N
+InpMainPsarTimeframe=0||0||0||49153||N
+; HiLo Settings
+InpUseMainHiLoFilter=true||false||0||true||N
+InpHiLoPeriod=14||20||1||200||N
+InpHiLoShift=0||0||1||10||N
+InpHiLoMethod=3||0||0||3||N
+InpHiLoAtrPeriod=14||14||1||140||N
+; Trading Time Filter
+InpStartHour=2||2||1||20||N
+InpStartMinute=0||0||1||10||N
+InpEndHour=22||22||1||220||N
+InpEndMinute=0||0||1||10||N
+InpEnableSessionFilter=true||false||0||true||N
+; Session Hours
+InpEnableAsiaSession=true||false||0||true||N
+InpAsiaStartHour=1||2||1||20||N
+InpAsiaStartMinute=0||0||1||10||N
+InpAsiaEndHour=7||9||1||90||N
+InpAsiaEndMinute=0||0||1||10||N
+InpEnableLondonSession=true||false||0||true||N
+InpLondonStartHour=7||13||1||130||N
+InpLondonStartMinute=0||0||1||10||N
+InpLondonEndHour=16||17||1||170||N
+InpLondonEndMinute=0||0||1||10||N
+InpEnableNewYorkSession=true||false||0||true||N
+InpNewYorkStartHour=16||16||1||160||N
+InpNewYorkStartMinute=0||0||1||10||N
+InpNewYorkEndHour=23||22||1||220||N
+InpNewYorkEndMinute=0||0||1||10||N
+; Risk Management
+InpMainStopLossMode=1||0||0||1||N
+InpStopLossPoints=500||500||1||5000||N
+InpMainStopAtrTimeframe=0||0||0||49153||N
+InpMainStopAtrPeriod=14||14||1||140||N
+InpMainStopAtrMultiplier=1.4||1.4||0.140000||14.000000||N
+InpTakeProfitPoints=0||2000||1||20000||N
+; Trailing Stop
+InpTrailingStartPoints=500||500||1||5000||N
+InpTrailingStepPoints=500||200||1||2000||N
+InpTrailingDistancePoints=500||500||1||5000||N
+InpTrailingBreakEvenOffsetPoints=50||0||1||10||N
+; ADX Filter
+InpEnableAdxFilter=false||false||0||true||N
+InpAdxTimeframe=0||0||0||49153||N
+InpAdxDmiPeriod=14||14||1||140||N
+InpAdxEnableSmoothing=true||false||0||true||N
+InpAdxSmoothing=14||14||1||140||N
+InpAdxThreshold=30||20.0||2.000000||200.000000||N
+InpAdxFilterMode=0||0||0||1||N
+; SuperTrend MTF Filter
+InpEnableSTMTF=true||false||0||true||N
+InpSTFilterTF=5||0||0||49153||N
+InpSTFilterATRPeriod=50||50||1||500||N
+InpSTFilterATRMult=1.5||1.5||0.150000||15.000000||N
+InpSTFilterATRMethod=true||false||0||true||N
+; Daily Target
+InpEnableDailyTarget=false||false||0||true||N
+InpDailyTargetMode=1||0||0||1||N
+InpDailyTargetValue=5.0||20.0||2.000000||200.000000||N
+InpEnableDailyDrawdown=false||false||0||true||N
+InpDailyDrawdownMode=1||0||0||1||N
+InpDailyDrawdownValue=5.0||5.0||0.500000||50.000000||N
+; Recovery - General
+InpEnableRecovery=true||false||0||true||N
+InpRecoveryMode=3||0||0||2||N
+InpRecoveryTargetMultiplier=2.0||2.0||0.200000||20.000000||N
+InpRecoveryLotMultiplier=1.437||2.0||0.200000||20.000000||N
+InpRecoveryMinZonePoints=500||500||1||5000||N
+InpRecoveryMaxZonePoints=3600||1300||1||13000||N
+; Recovery Classic Zone - Signal Filter
+InpRecoveryClassicStTimeframe=5||0||0||49153||N
+InpRecoveryClassicStAtrPeriod=50||50||1||500||N
+InpRecoveryClassicStMultiplier=1.5||1.5||0.150000||15.000000||N
+InpRecoveryClassicStAtrMethod=true||false||0||true||N
+InpRecoveryClassicPsarTimeframe=5||0||0||49153||N
+InpRecoveryClassicPsarStart=0.01||0.02||0.002000||0.200000||N
+InpRecoveryClassicPsarIncrement=0.01||0.02||0.002000||0.200000||N
+InpRecoveryClassicPsarMaximum=0.1||0.2||0.020000||2.000000||N
+; Recovery Classic Zone - Basket Trailing
+InpBasketTrailing=false||false||0||true||N
+InpBasketTrailThreshold=0.5||0.5||0.050000||5.000000||N
+InpBasketTrailGapPct=0.2||0.3||0.030000||3.000000||N
+InpBasketHardFloor=true||false||0||true||N
+; Recovery Distance - Signal Filter
+InpRecoveryDistanceStTimeframe=15||0||0||49153||N
+InpRecoveryDistanceStAtrPeriod=50||50||1||500||N
+InpRecoveryDistanceStMultiplier=1.5||1.5||0.150000||15.000000||N
+InpRecoveryDistanceStAtrMethod=true||false||0||true||N
+InpRecoveryDistancePsarTimeframe=15||0||0||49153||N
+InpRecoveryDistancePsarStart=0.04||0.02||0.002000||0.200000||N
+InpRecoveryDistancePsarIncrement=0.04||0.02||0.002000||0.200000||N
+InpRecoveryDistancePsarMaximum=0.4||0.2||0.020000||2.000000||N
+; Recovery - Zone
+InpRecoveryZoneMode=1||0||0||1||N
+InpRecoveryZoneRangePoints=500||4000||1||40000||N
+InpRecoveryAtrPeriod=14||14||1||140||N
+InpRecoveryAtrMultiplier=2.0||1.5||0.150000||15.000000||N
+InpRecoveryAtrTimeframe=0||0||0||49153||N
+; Recovery - Grid
+InpRecoveryGridStepPoints=500||500||1||5000||N
+InpRecoveryGridStepMode=0||0||0||1||N
+InpRecoveryGridAtrPeriod=14||14||1||140||N
+InpRecoveryGridAtrMultiplier=1.2||1.0||0.100000||10.000000||N
+InpRecoveryGridAtrTimeframe=0||0||0||49153||N
+InpRecoveryGridMaxLevels=10||4||1||40||N
+InpRecoveryGridLotMultiplier=1.437||0.0||0.000000||0.000000||N
+InpRecoveryGridDirectionMode=0||0||0||2||N
+InpRecoveryGridTakeProfitMoney=0.0||0.0||0.000000||0.000000||N
+InpRecoveryGridForceLevel1Market=true||false||0||true||N
+; Recovery - Distance
+InpRecoveryDistancePoints=500||500||1||5000||N
+InpRecoveryDistanceSignalSource=2||0||0||1||N
+InpRecoveryBasicEmaFast=34||21||1||210||N
+InpRecoveryBasicEmaSlow=55||55||1||550||N
+; Recovery Risk Control
+InpRecoveryAbortBeforeLevel=4||0||1||20||N
+InpMaxRecoverySteps=0||0||1||10||N
+InpMaxRecoveryLot=0.0||0.0||0.000000||0.000000||N
+InpRecoveryMaxDrawdown=0.0||0.0||0.000000||0.000000||N
+InpMaxRecoveryPositions=0||0||1||10||N
+InpRecoveryCooldownBars=0||0||1||10||N
+; Order Identity
+InpMagicNumber=140402||140402||1||1404020||N
+InpBuyComment=orderBuy
+InpSellComment=orderSell
+; Dashboard Integration
+InpEnableAccountStatusDashboard=true||false||0||true||N
+InpAccountStatusIndicatorPath=accountStatus\accountStatus
+
+; ML Dataset Logger (Observation Only)
+InpEnableMlDatasetLogger=true||false||0||true||N
+InpMlStrategyVersion=folder32_cci3_abort_l4_v1
+InpMlSourceRevision=bff7a8ccbc90845aabd2bb65f38b9473fca1df89
+InpMlPresetHash=D5DC9DAAAEABE0242169811A560D237D9A4E4514F4B55BE7B656B76BB6133214
+InpMlRunId=folder32_cci3_abort_l4_v1_20260104_20260110_r01
+InpMlDatasetDirectory=TS7_ML
+InpMlDataIntegrityFlag=SYMBOL_MIGRATION_UNVERIFIED
+InpMlFlushEveryRecords=50||50||1||500||N

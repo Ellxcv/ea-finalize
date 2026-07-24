@@ -67,3 +67,17 @@ Confirm:
 - no orphan recovery positions or pending orders remain.
 
 Only after the short behavior test passes should folders 47-48 be repeated with the abort enabled.
+
+## Reproducible artifacts
+
+- Source revision: `bff7a8ccbc90845aabd2bb65f38b9473fca1df89`
+- Exact-commit compile: `0 errors, 0 warnings`
+- Strategy preset:
+  `presets/folder32-cci3-recovery-abort-l4-strategy.set`
+- Observation logger preset:
+  `presets/folder32-cci3-recovery-abort-l4-observation-on.set`
+- Strategy preset SHA-256:
+  `D5DC9DAAAEABE0242169811A560D237D9A4E4514F4B55BE7B656B76BB6133214`
+
+The observation preset keeps the folder32 CCI-validity-3 baseline and enables the ML dataset
+logger. Its only intentional strategy change is `InpRecoveryAbortBeforeLevel=4`.
