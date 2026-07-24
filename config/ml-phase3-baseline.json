@@ -1,0 +1,160 @@
+{
+  "config_version": "ts7_ml_phase3_v1",
+  "dataset_schema": "ts7_entry_candidate_v1",
+  "minimum_rows": 500,
+  "primary_label": {
+    "column": "Barrier50Outcome",
+    "positive": "FAVORABLE_FIRST",
+    "negative": "ADVERSE_FIRST"
+  },
+  "feature_contract": {
+    "numeric": [
+      "Direction",
+      "SignalAgeBars",
+      "SpreadPoints",
+      "SpreadATR",
+      "BarrierATR",
+      "ATR_M5",
+      "ATRRatioM1M5",
+      "InitialSLPoints",
+      "InitialSLATR",
+      "CciSignal",
+      "CiSignal",
+      "CciCandidate",
+      "CiCandidate",
+      "CciDeltaDir",
+      "CciGapSignalDir",
+      "CciGapCandidateDir",
+      "HiLoSignalAlign",
+      "PsarSignalAlign",
+      "STSignalAlign",
+      "STMTFSignalAlign",
+      "ConfirmationsAtSignal",
+      "HiLoLatencyBars",
+      "PsarLatencyBars",
+      "STLatencyBars",
+      "STMTFLatencyNativeBars",
+      "STMTFLatencySeconds",
+      "HiLoAgeBars",
+      "PsarAgeBars",
+      "STAgeBars",
+      "STMTFAgeBars",
+      "Return1ATR",
+      "Return3ATR",
+      "Return5ATR",
+      "Return10ATR",
+      "Return20ATR",
+      "BodyATR",
+      "RangeATR",
+      "UpperWickATR",
+      "LowerWickATR",
+      "DisplacementATR",
+      "PreEntryMFEATR",
+      "PreEntryMAEATR",
+      "DistanceEMAATR",
+      "EMASlope5ATR",
+      "EMASlope10ATR",
+      "RecentRangePositionDir",
+      "TickVolume",
+      "TimeOfDaySin",
+      "TimeOfDayCos",
+      "DayOfWeekSin",
+      "DayOfWeekCos",
+      "MinutesFromSessionOpen",
+      "MinutesToSessionClose",
+      "DirectionalRoomATR"
+    ],
+    "boolean": [
+      "AsiaSession",
+      "LondonSession",
+      "NewYorkSession"
+    ],
+    "categorical": [
+      "CciSignalType",
+      "LateConfirmMask",
+      "DataIntegrityFlag"
+    ],
+    "forbidden": [
+      "RunId",
+      "SetupId",
+      "StrategyVersion",
+      "SourceRevision",
+      "PresetHash",
+      "Symbol",
+      "Timeframe",
+      "CandidateTime",
+      "CandidateBarTime",
+      "SignalTime",
+      "CandidatePrice",
+      "Bid",
+      "Ask",
+      "InitialSL",
+      "Barrier40Outcome",
+      "Barrier40ElapsedBars",
+      "Barrier50Outcome",
+      "Barrier50ElapsedBars",
+      "TradeNetProfit",
+      "TradeBarsHeld",
+      "TradeMFEPoints",
+      "TradeMAEPoints",
+      "TradeExitReason",
+      "BusinessOutcome",
+      "OriginalNetProfit",
+      "RecoveryNetProfit",
+      "CycleNetProfit",
+      "RecoveryStarted",
+      "RecoveryEntries",
+      "MaxRecoveryLevel",
+      "CycleCompletionReason"
+    ]
+  },
+  "split": {
+    "fold_count": 3,
+    "initial_history_fraction": 0.4,
+    "evaluation_fraction": 0.2,
+    "validation_fraction_of_history": 0.2,
+    "purge_embargo_minutes": 50,
+    "group_fields": [
+      "SignalTime",
+      "Direction"
+    ],
+    "minimum_partition_rows": 40
+  },
+  "models": {
+    "logistic_regression": {
+      "l2": 0.01,
+      "max_iterations": 1000,
+      "learning_rate": 0.1,
+      "tolerance": 1e-8
+    },
+    "shallow_random_forest": {
+      "trees": 31,
+      "max_depth": 4,
+      "min_leaf": 15,
+      "max_thresholds": 12,
+      "seed": 140402
+    }
+  },
+  "calibration": {
+    "max_iterations": 400,
+    "learning_rate": 0.05,
+    "l2": 0.001,
+    "tolerance": 1e-9
+  },
+  "threshold_selection": {
+    "winner_rejection_max": 0.1,
+    "minimum_retained_fraction": 0.5
+  },
+  "reporting": {
+    "calibration_bins": 10,
+    "minimum_subgroup_rows": 20,
+    "subgroup_fields": [
+      "Direction",
+      "CciSignalType",
+      "AsiaSession",
+      "LondonSession",
+      "NewYorkSession",
+      "DataIntegrityFlag"
+    ]
+  }
+}

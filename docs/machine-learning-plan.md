@@ -461,11 +461,18 @@ Workflow, collection context, gate, dan command tersedia di
 
 ### Fase 3 — Offline baseline models
 
+Status tooling: selesai diimplementasikan pada 2026-07-24. Eksperimen awal 982 candidate selesai,
+tetapi tidak menemukan sinyal walk-forward yang cukup untuk membekukan model. Logistic Regression
+menjadi exploratory champion dengan ROC-AUC 0,498; final OOS tetap belum dibuka.
+
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;
 - latih Logistic Regression dan tree challengers;
 - kalibrasi probability;
 - pilih feature/model/threshold hanya dari train/validation.
+
+Kontrak pipeline, command, artefak, dan hasil awal tersedia di
+[ml-phase3-baseline-models.md](ml-phase3-baseline-models.md).
 
 ### Fase 4 — Frozen out-of-sample
 
