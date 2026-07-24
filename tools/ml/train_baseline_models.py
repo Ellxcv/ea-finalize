@@ -101,6 +101,39 @@ def read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def merge_config(
+    base: Mapping[str, Any], override: Mapping[str, Any]
+) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(base)
+    for key, value in override.items():
+        if (
+            key in merged
+            and isinstance(merged[key], dict)
+            and isinstance(value, Mapping)
+        ):
+            merged[key] = merge_config(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def read_config(path: Path, seen: set[Path] | None = None) -> dict[str, Any]:
+    resolved = path.resolve()
+    visited = set() if seen is None else set(seen)
+    if resolved in visited:
+        raise TrainingFailure(f"Config inheritance cycle detected at {resolved}")
+    visited.add(resolved)
+    config = read_json(resolved)
+    parent_name = config.pop("extends", None)
+    if parent_name is None:
+        return config
+    if not isinstance(parent_name, str) or not parent_name.strip():
+        raise TrainingFailure(f"Invalid extends value in {resolved}")
+    parent_path = (resolved.parent / parent_name).resolve()
+    parent = read_config(parent_path, visited)
+    return merge_config(parent, config)
+
+
 def read_dataset(path: Path, config: Mapping[str, Any]) -> list[dict[str, str]]:
     if not path.is_file():
         raise TrainingFailure(f"Dataset does not exist: {path}")
@@ -891,6 +924,14 @@ def prepare_output(output_dir: Path, repo_root: Path, replace: bool) -> None:
             )
         if not output.is_dir():
             raise TrainingFailure(f"Output exists and is not a directory: {output}")
+        marker = output / "experiment_manifest.json"
+        if not marker.is_file():
+            raise TrainingFailure(
+                "Refusing to replace a directory without experiment_manifest.json"
+            )
+        manifest = read_json(marker)
+        if manifest.get("manifest_version") != "ts7_ml_experiment_manifest_v1":
+            raise TrainingFailure("Refusing to replace an unrelated output directory")
         shutil.rmtree(output)
     output.mkdir(parents=True)
 
@@ -1352,7 +1393,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        config = read_json(args.config)
+        config = read_config(args.config)
         report = run_experiment(
             args.dataset,
             args.output_dir,

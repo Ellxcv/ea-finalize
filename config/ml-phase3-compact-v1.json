@@ -1,0 +1,44 @@
+{
+  "extends": "ml-phase3-baseline.json",
+  "config_version": "ts7_ml_phase3_compact_v1",
+  "feature_contract": {
+    "numeric": [
+      "Direction",
+      "SignalAgeBars",
+      "SpreadPoints",
+      "BarrierATR",
+      "ATRRatioM1M5",
+      "InitialSLATR",
+      "CciGapSignalDir",
+      "CciGapCandidateDir",
+      "ConfirmationsAtSignal",
+      "HiLoLatencyBars",
+      "PsarLatencyBars",
+      "STLatencyBars",
+      "STMTFAgeBars",
+      "Return1ATR",
+      "Return5ATR",
+      "Return20ATR",
+      "RangeATR",
+      "UpperWickATR",
+      "LowerWickATR",
+      "DisplacementATR",
+      "PreEntryMAEATR",
+      "DistanceEMAATR",
+      "EMASlope10ATR",
+      "RecentRangePositionDir",
+      "TickVolume",
+      "TimeOfDaySin",
+      "TimeOfDayCos",
+      "DayOfWeekSin",
+      "DayOfWeekCos",
+      "MinutesFromSessionOpen",
+      "MinutesToSessionClose",
+      "DirectionalRoomATR"
+    ],
+    "categorical": [
+      "CciSignalType",
+      "LateConfirmMask"
+    ]
+  }
+}

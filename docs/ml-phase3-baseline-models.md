@@ -137,6 +137,11 @@ development run, tetapi feature individual lemah dan memiliki 14 pasangan korela
 minimal 0,90. Kontrak, command, dan hasil tersedia di
 [ml-phase3-feature-diagnostics.md](ml-phase3-feature-diagnostics.md).
 
+Compact challenger kemudian mengurangi raw feature dari 60 menjadi 37. L4+ rejection Random
+Forest naik menjadi 12,90%, tetapi winner rejection memburuk menjadi 11,14%, melewati gate 10%,
+dan metrik klasifikasi/recovery ikut memburuk. Compact contract tidak dipromosikan. Detailnya ada
+di [ml-phase3-compact-features.md](ml-phase3-compact-features.md).
+
 ## Interpretasi dan langkah berikutnya
 
 Hasil lemah belum membuktikan ML tidak berguna. Dataset 982 candidate berada pada batas eksplorasi

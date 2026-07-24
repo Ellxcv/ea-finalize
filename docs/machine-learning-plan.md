@@ -481,6 +481,12 @@ L4+ pada kedua run. Hambatan utama berada pada feature: hanya tujuh sinyal univa
 stabil dan ada 14 pasangan feature berkorelasi absolut minimal 0,90. Label dipertahankan; langkah
 berikutnya adalah revisi/reduksi feature di development stage, bukan membuka final OOS.
 
+Compact challenger sudah memangkas raw feature dari 60 menjadi 37. Feature reduction menaikkan
+L4+ rejection Random Forest menjadi 12,90%, tetapi winner rejection menjadi 11,14% dan melanggar
+gate maksimal 10%; AUC, original win rate, dan recovery rate juga tidak membaik. Compact contract
+ditolak. Development berikutnya perlu menambah informasi entry-state yang belum tersedia, bukan
+memilih threshold baru dari data yang sama.
+
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;
 - latih Logistic Regression dan tree challengers;

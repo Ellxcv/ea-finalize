@@ -40,6 +40,86 @@ def chronological_rows(count: int) -> list[dict[str, object]]:
 
 
 class BaselineModelTests(unittest.TestCase):
+    def test_compact_project_config_is_valid_and_reduced(self) -> None:
+        baseline = load_config()
+        compact = TRAIN.read_config(
+            REPO_ROOT / "config" / "ml-phase3-compact-v1.json"
+        )
+
+        TRAIN.validate_config(compact)
+
+        baseline_features = {
+            *baseline["feature_contract"]["numeric"],
+            *baseline["feature_contract"]["boolean"],
+            *baseline["feature_contract"]["categorical"],
+        }
+        compact_features = {
+            *compact["feature_contract"]["numeric"],
+            *compact["feature_contract"]["boolean"],
+            *compact["feature_contract"]["categorical"],
+        }
+        self.assertEqual(len(baseline_features), 60)
+        self.assertEqual(len(compact_features), 37)
+        self.assertLess(compact_features, baseline_features)
+        self.assertEqual(
+            compact["feature_contract"]["forbidden"],
+            baseline["feature_contract"]["forbidden"],
+        )
+
+    def test_config_inheritance_replaces_feature_lists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            base = root / "base.json"
+            child = root / "child.json"
+            base.write_text(
+                json.dumps(
+                    {
+                        "config_version": "base",
+                        "feature_contract": {
+                            "numeric": ["A", "B"],
+                            "boolean": ["Flag"],
+                            "categorical": ["Kind"],
+                            "forbidden": ["Leak"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            child.write_text(
+                json.dumps(
+                    {
+                        "extends": "base.json",
+                        "config_version": "child",
+                        "feature_contract": {
+                            "numeric": ["A"],
+                            "categorical": ["CompactKind"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            config = TRAIN.read_config(child)
+
+            self.assertEqual(config["config_version"], "child")
+            self.assertEqual(config["feature_contract"]["numeric"], ["A"])
+            self.assertEqual(
+                config["feature_contract"]["categorical"], ["CompactKind"]
+            )
+            self.assertEqual(config["feature_contract"]["boolean"], ["Flag"])
+            self.assertEqual(config["feature_contract"]["forbidden"], ["Leak"])
+
+    def test_config_inheritance_cycle_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            first = root / "first.json"
+            second = root / "second.json"
+            first.write_text('{"extends":"second.json"}', encoding="utf-8")
+            second.write_text('{"extends":"first.json"}', encoding="utf-8")
+
+            with self.assertRaises(TRAIN.TrainingFailure):
+                TRAIN.read_config(first)
+
     def test_config_rejects_forbidden_feature(self) -> None:
         config = load_config()
         config["feature_contract"]["numeric"].append("BusinessOutcome")
