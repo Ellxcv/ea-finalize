@@ -233,6 +233,13 @@ def validate_config(config: Mapping[str, Any]) -> None:
         re.compile(str(config["source_revision_pattern"]))
     except re.error as exc:
         raise AuditFailure(f"Invalid source_revision_pattern: {exc}") from exc
+    expected_revision = str(config.get("expected_source_revision", "")).strip()
+    if expected_revision and not re.fullmatch(
+        str(config["source_revision_pattern"]), expected_revision
+    ):
+        raise AuditFailure(
+            "expected_source_revision must match source_revision_pattern"
+        )
     if float(config["financial_tolerance"]) < 0 or float(config["price_tolerance"]) < 0:
         raise AuditFailure("Financial and price tolerance cannot be negative")
     configured_test_windows(config)
@@ -442,6 +449,8 @@ def validate_manifest(audit: RunAudit, config: Mapping[str, Any]) -> None:
         "symbol": config["expected_symbol"],
         "timeframe": config["expected_timeframe"],
     }
+    if config.get("expected_source_revision"):
+        comparisons["source_revision"] = config["expected_source_revision"]
     for key, expected in comparisons.items():
         if str(manifest.get(key, "")) != str(expected):
             add_issue(

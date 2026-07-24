@@ -2,7 +2,7 @@
 
 ## Status
 
-`IMPLEMENTED — COMPILED — STRATEGY TESTER PARITY PENDING`
+`IMPLEMENTED — COMPILED — STRATEGY TESTER PARITY PASSED`
 
 ## Tujuan
 
@@ -53,7 +53,7 @@ Saat logger ON, output tetap observation-only dan tidak memberi izin/veto order.
 | MQL header vs Python v2 contract | 97 kolom, lulus |
 | Audit v1 backward compatibility | 1.080/1.080 candidate retained, 0 error |
 | Audit v2 readiness/merge fixture | lulus |
-| Logger OFF/ON Strategy Tester parity | pending |
+| Logger OFF/ON Strategy Tester parity | lulus, folder 41/42 |
 | Live/runtime model | tidak dibuat |
 | Final OOS | belum dibuka |
 
@@ -63,15 +63,50 @@ Compile log lokal:
 
 Raw logs, `.ex5`, dan compile artifact tetap berada di luar version control.
 
+## Retained collection build
+
+Build bersih untuk collection validity 3 dibuat langsung dari source revision
+`eaa396be6ad526bb17ac8e150e69b5718cffbb0e`:
+
+~~~text
+C:\Users\ACER\Documents\TS7_ML\retained-builds\
+  eaa396be6ad526bb17ac8e150e69b5718cffbb0e\
+~~~
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `testing_strat_7.ex5` | `66DC93D78182EE9534B3C4FFD0051F9DE1ECB5718525B99D24050ADA5EDBA42A` |
+| strategy-only preset | `7CA8B8F6C99073EC78147B42EFD347E7B0A1972EA834CD18897E0F5EAFBAB635` |
+| logger preset Sep–Jan | `F68C7283EF944FA2BA603162CC6ECD640076A93E6E759C8E25D917FBA4B458FF` |
+| logger preset Jan–Mei | `7FB46778B34AA5FE2F5A3D479C5BAEA015B2112D6B0D1059F5D85263C6FC96F5` |
+
+Compile retained menghasilkan `0 errors, 0 warnings`. Preset baru berbeda dari preset logger v1
+hanya pada `InpMlSourceRevision` dan `InpMlRunId`; seluruh input trading identik.
+
+## Strategy Tester parity — folder 41/42
+
+Control folder 41 memakai logger OFF dan treatment folder 42 memakai logger ON pada
+`GOLD.i#`, M1, `2026.01.04–2026.01.10`, real ticks, dan history quality 100%. Seluruh input
+trading identik; lima perbedaan `.set` hanya berada pada enable/metadata ML.
+
+| Pemeriksaan | OFF | ON | Hasil |
+| --- | ---: | ---: | --- |
+| Total net profit | 227,29 | 227,29 | identik |
+| Balance DD maximal | 49,52 (1,18%) | 49,52 (1,18%) | identik |
+| Equity DD maximal | 118,00 (2,84%) | 118,00 (2,84%) | identik |
+| Total trades / deals | 84 / 168 | 84 / 168 | identik |
+| Result, order, dan deal rows | — | — | identik |
+
+Run ON menghasilkan 38 candidate/cycle dan 76 barrier outcome. Header berisi 97 kolom,
+`FeatureReady=false` dan `FeatureReadyV2=false` sama-sama nol, seluruh 15 field baru finite,
+tidak ada order gagal, dan sum `CycleNetProfit=227,29` cocok dengan report.
+
+Manifest folder 42 salah dilabeli `folder32_v1` meskipun input aktual memakai
+`InpCciSignalValidityBars=3`. Karena itu run ini hanya dipakai sebagai bukti parity dan tidak
+menjadi retained training data.
+
 ## Required next validation
 
-Jalankan short real-tick control/treatment dengan input strategi identik:
-
-- logger OFF versus logger ON;
-- periode singkat yang memiliki cukup candidate;
-- final balance, deal sequence, dan original/recovery outcome harus identik;
-- candidate ON harus 97 kolom;
-- `FeatureReady=false` dan `FeatureReadyV2=false` harus nol;
-- seluruh field baru harus finite dan memakai closed-bar snapshot.
-
-Dataset development panjang v2 belum boleh dikumpulkan sebelum parity ini lulus.
+Kumpulkan ulang dua development window validity 3 dengan config
+`config/ml-dataset-audit-folder32-cci3-v2.json`. Final OOS
+`2026.05.03–2026.07.18` tetap belum boleh dibuka.

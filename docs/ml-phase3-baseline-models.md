@@ -144,7 +144,9 @@ di [ml-phase3-compact-features.md](ml-phase3-compact-features.md).
 
 Schema v2 entry-state sudah diimplementasikan untuk menguji informasi ADX/DI, CCI velocity,
 volatility expansion, serta indicator distance/slope yang belum tersedia di v1. Training v2 belum
-dimulai; short logger parity dan development data v2 yang diaudit harus tersedia lebih dahulu.
+dimulai. Short logger parity folder 41/42 sudah lulus; berikutnya dua development window validity 3
+harus dikumpulkan ulang dan lolos
+`config/ml-dataset-audit-folder32-cci3-v2.json` sebelum eksperimen v2 dijalankan.
 
 ## Interpretasi dan langkah berikutnya
 

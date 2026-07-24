@@ -490,8 +490,10 @@ memilih threshold baru dari data yang sama.
 Schema `ts7_entry_candidate_v2` kemudian diimplementasikan sebagai observation-only extension.
 Ia menambah ADX/DI strength, CCI velocity, ATR expansion, serta distance dan line-slope
 HiLo/PSAR/SuperTrend M1–MTF. Audit tetap mendukung v1, sementara config training/diagnostic v2
-disiapkan terpisah. Source sudah compile `0 errors, 0 warnings`; short logger OFF/ON parity dan
-pengumpulan ulang development data v2 masih wajib sebelum training berikutnya.
+disiapkan terpisah. Source sudah compile `0 errors, 0 warnings`; short logger OFF/ON folder 41/42
+lulus dengan urutan deal dan hasil identik. Config retained validity 3 kini membekukan source
+revision `eaa396be6ad526bb17ac8e150e69b5718cffbb0e`. Pengumpulan ulang dua development window v2
+masih wajib sebelum training berikutnya.
 
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;

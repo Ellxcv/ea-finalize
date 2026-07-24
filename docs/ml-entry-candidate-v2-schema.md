@@ -95,11 +95,13 @@ source revision tetap menjadi provenance utama.
 ## Tooling
 
 - `tools/ml/audit_dataset.py` mendukung schema v1 dan v2 secara eksplisit;
+- `config/ml-dataset-audit-folder32-cci3-v2.json` membekukan strategy, source revision, preset,
+  dependency, dan dua development window validity 3;
 - `config/ml-phase3-baseline-v2.json` menambahkan 15 numeric feature baru ke model contract;
 - `config/ml-phase3-feature-diagnostics-v2.json` menyediakan kontrak diagnosis v2;
-- audit config retained-run tetap harus dibuat setelah strategy version, preset hash, test window,
-  dependency hash, dan source revision v2 dibekukan.
+- audit dapat mewajibkan `expected_source_revision` agar build berbeda tidak tercampur.
 
-Sebelum dataset panjang dikumpulkan, schema v2 harus melewati short Strategy Tester parity:
-logger OFF dan ON wajib menghasilkan urutan deal serta balance identik, candidate wajib memiliki
-97 kolom, dan `FeatureReadyV2=false` harus nol.
+Short Strategy Tester parity folder 41/42 sudah lulus: logger OFF dan ON menghasilkan result,
+order, deal, serta balance identik. Run ON memiliki 97 kolom dan nol
+`FeatureReadyV2=false`. Dataset panjang tetap harus dibuat ulang karena manifest parity salah
+melabeli preset validity 3 sebagai `folder32_v1`.

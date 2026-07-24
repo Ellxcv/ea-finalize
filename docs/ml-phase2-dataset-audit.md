@@ -80,6 +80,48 @@ Window ini sudah pernah dilihat sehingga hanya menjadi development/diagnostic da
 out-of-sample. Jangan membuka periode calon OOS lain sebelum coverage run pertama ditinjau dan
 window OOS dibekukan secara eksplisit.
 
+### Collection schema v2 — CCI validity 3
+
+Setelah parity folder 41/42 lulus, collection entry-state v2 memakai:
+
+~~~text
+InpEnableMlDatasetLogger=true
+InpMlStrategyVersion=folder32_cci3_v1
+InpMlSourceRevision=eaa396be6ad526bb17ac8e150e69b5718cffbb0e
+InpMlPresetHash=7CA8B8F6C99073EC78147B42EFD347E7B0A1972EA834CD18897E0F5EAFBAB635
+InpMlRunId=<unique run id>
+InpMlDatasetDirectory=TS7_ML
+InpMlDataIntegrityFlag=SYMBOL_MIGRATION_UNVERIFIED
+InpMlFlushEveryRecords=50
+~~~
+
+Gunakan hanya dua development window yang history quality-nya sudah terbukti:
+
+~~~text
+2025.09.01–2026.01.03
+2026.01.04–2026.05.02
+~~~
+
+Audit dengan `config/ml-dataset-audit-folder32-cci3-v2.json`. Config ini juga mewajibkan source
+revision tepat, schema v2, `FeatureReadyV2=true`, real ticks, history quality minimal 99%, dan
+termination `COMPLETED`. Periode `2025.05.01–2025.08.31` tidak digunakan karena run sebelumnya
+memiliki history quality 16% dan margin call. Final OOS `2026.05.03–2026.07.18` tetap tersegel.
+
+Retained build dan preset lokal berada di:
+
+~~~text
+C:\Users\ACER\Documents\TS7_ML\retained-builds\
+  eaa396be6ad526bb17ac8e150e69b5718cffbb0e\
+    testing_strat_7.ex5
+    folder32-cci-validity3-strategy-original.set
+    folder32-cci3-entry-v2-dev-20250901-20260103-r01.set
+    folder32-cci3-entry-v2-dev-20260104-20260502-r01.set
+    build_manifest.json
+~~~
+
+Load preset logger yang sesuai periode ke Strategy Tester. Gunakan strategy-only preset saat
+membuat `collection_context.json`, karena hash itulah yang dibekukan di `run_manifest.json`.
+
 ## 2. Collection context
 
 Logger tidak mengetahui path report, hash binary/dependency, model tick, atau final balance tester.

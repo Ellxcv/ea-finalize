@@ -327,6 +327,60 @@ class DatasetAuditTests(unittest.TestCase):
         self.assertEqual(report["totals"]["retained_candidates"], 0)
         self.assertEqual(report["totals"]["excluded_candidates"], 1)
 
+    def test_cci3_v2_project_config_freezes_provenance(self) -> None:
+        config = json.loads(
+            (
+                REPO_ROOT
+                / "config"
+                / "ml-dataset-audit-folder32-cci3-v2.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        AUDIT.validate_config(config)
+
+        self.assertEqual(config["schema_version"], AUDIT.SCHEMA_VERSION_V2)
+        self.assertEqual(config["expected_strategy_version"], "folder32_cci3_v1")
+        self.assertEqual(
+            config["expected_source_revision"],
+            "eaa396be6ad526bb17ac8e150e69b5718cffbb0e",
+        )
+        self.assertEqual(
+            config["expected_preset_sha256"],
+            "7CA8B8F6C99073EC78147B42EFD347E7B0A1972EA834CD18897E0F5EAFBAB635",
+        )
+        self.assertEqual(
+            {
+                frozenset(window.items())
+                for window in config["expected_test_windows"]
+            },
+            {
+                frozenset(
+                    {"from": "2025.09.01", "to": "2026.01.03"}.items()
+                ),
+                frozenset(
+                    {"from": "2026.01.04", "to": "2026.05.02"}.items()
+                ),
+            },
+        )
+        self.assertTrue(
+            set(AUDIT.CANDIDATE_V2_FEATURES).issubset(
+                config["numeric_rule_features"]
+            )
+        )
+
+    def test_expected_source_revision_mismatch_rejects_run(self) -> None:
+        raw_root = self.root / "raw"
+        raw_root.mkdir()
+        create_run(raw_root, "run-a")
+        self.config["expected_source_revision"] = "f" * 40
+
+        report = self.run_audit(raw_root)
+
+        self.assertGreater(report["totals"]["errors"], 0)
+        issues = (self.root / "processed" / "audit_issues.csv").read_text()
+        self.assertIn("MANIFEST_MISMATCH", issues)
+        self.assertIn("source_revision", issues)
+
     def test_balance_reconciliation_failure_rejects_whole_run(self) -> None:
         raw_root = self.root / "raw"
         raw_root.mkdir()
