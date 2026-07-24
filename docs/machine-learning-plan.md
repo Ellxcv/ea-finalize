@@ -492,8 +492,13 @@ Ia menambah ADX/DI strength, CCI velocity, ATR expansion, serta distance dan lin
 HiLo/PSAR/SuperTrend M1–MTF. Audit tetap mendukung v1, sementara config training/diagnostic v2
 disiapkan terpisah. Source sudah compile `0 errors, 0 warnings`; short logger OFF/ON folder 41/42
 lulus dengan urutan deal dan hasil identik. Config retained validity 3 kini membekukan source
-revision `eaa396be6ad526bb17ac8e150e69b5718cffbb0e`. Pengumpulan ulang dua development window v2
-masih wajib sebelum training berikutnya.
+revision `eaa396be6ad526bb17ac8e150e69b5718cffbb0e`.
+
+Folder 43–44 kemudian menghasilkan 1.080 candidate v2 dan audit lulus nol error. Model tetap lemah:
+ROC-AUC 0,4975 untuk Logistic Regression dan 0,4898 untuk Random Forest. Hasil terbaik hanya
+menolak 11,29% L4+ tanpa memperbaiki original win/recovery, sehingga tidak ada model/threshold
+yang dibekukan. Development berikutnya harus mereview target langsung `NO_RECOVERY` dan
+`RECOVERY_L4_PLUS`, bukan menambah indikator serupa. Final OOS tetap belum dibuka.
 
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;

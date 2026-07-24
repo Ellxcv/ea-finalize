@@ -23,6 +23,9 @@ allowlist diambil dari `config/ml-phase3-baseline.json`. Output wajib berada di 
 `--replace-output` hanya dapat mengganti direktori yang sudah memiliki manifest diagnosis yang
 sesuai.
 
+Model config mendukung `extends` dengan merge behavior yang sama seperti trainer. Karena itu
+diagnosis schema v2 dapat langsung memakai `config/ml-phase3-baseline-v2.json`.
+
 Output:
 
 ~~~text
@@ -70,3 +73,15 @@ Kesimpulan:
 
 Catatan hasil lengkap:
 [feature diagnostic record](../tuning/runs/2026-07-24_GOLD-i_M1_cci-validity3-feature-diagnostic/RECORD.md).
+
+## Hasil entry-state v2
+
+Dataset folder 43–44 memiliki sample/label identik dan menambah 15 feature baru. Hanya dua feature
+baru stabil pada kedua run:
+
+- `AdxValue` untuk barrier favorable, pooled AUC 0,4628;
+- `HiLoLineSlopeATR` untuk L4+, pooled AUC 0,5559.
+
+Tiga belas feature baru lain gagal stability screen. Ini tidak mendukung penambahan entry guard
+ADX/DI, CCI velocity, ATR expansion, atau distance/slope indikator secara langsung. Detail:
+[entry-state v2 analysis](ml-entry-state-v2-analysis.md).

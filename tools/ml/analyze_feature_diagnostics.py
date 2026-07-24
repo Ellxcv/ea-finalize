@@ -30,12 +30,47 @@ def sha256_file(path: Path) -> str:
 
 def read_json(path: Path) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        value = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise DiagnosticFailure(f"Cannot read JSON {path}: {exc}") from exc
     if not isinstance(value, dict):
         raise DiagnosticFailure(f"JSON root must be an object: {path}")
     return value
+
+
+def merge_config(
+    base: Mapping[str, Any], override: Mapping[str, Any]
+) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(base)
+    for key, value in override.items():
+        if (
+            key in merged
+            and isinstance(merged[key], dict)
+            and isinstance(value, Mapping)
+        ):
+            merged[key] = merge_config(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def read_config(path: Path, seen: set[Path] | None = None) -> dict[str, Any]:
+    resolved = path.resolve()
+    visited = set() if seen is None else set(seen)
+    if resolved in visited:
+        raise DiagnosticFailure(
+            f"Config inheritance cycle detected at {resolved}"
+        )
+    visited.add(resolved)
+    config = read_json(resolved)
+    parent_name = config.pop("extends", None)
+    if parent_name is None:
+        return config
+    if not isinstance(parent_name, str) or not parent_name.strip():
+        raise DiagnosticFailure(f"Invalid extends value in {resolved}")
+    parent_path = (resolved.parent / parent_name).resolve()
+    parent = read_config(parent_path, visited)
+    return merge_config(parent, config)
 
 
 def parse_float(value: str, field: str) -> float:
@@ -691,8 +726,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         report = run_diagnostics(
             args.dataset.resolve(),
             args.output_dir.resolve(),
-            read_json(args.diagnostic_config.resolve()),
-            read_json(args.model_config.resolve()),
+            read_config(args.diagnostic_config.resolve()),
+            read_config(args.model_config.resolve()),
             repo_root,
             args.diagnostic_config.resolve(),
             args.model_config.resolve(),

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -16,6 +18,53 @@ SPEC.loader.exec_module(DIAGNOSTICS)
 
 
 class FeatureDiagnosticTests(unittest.TestCase):
+    def test_config_inheritance_matches_training_contract_behavior(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            base = root / "base.json"
+            child = root / "child.json"
+            base.write_text(
+                json.dumps(
+                    {
+                        "dataset_schema": "ts7_entry_candidate_v1",
+                        "feature_contract": {
+                            "numeric": ["A"],
+                            "boolean": ["Flag"],
+                            "categorical": ["Kind"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            child.write_text(
+                json.dumps(
+                    {
+                        "extends": "base.json",
+                        "dataset_schema": "ts7_entry_candidate_v2",
+                        "feature_contract": {"numeric": ["A", "B"]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            config = DIAGNOSTICS.read_config(child)
+
+            self.assertEqual(config["dataset_schema"], "ts7_entry_candidate_v2")
+            self.assertEqual(config["feature_contract"]["numeric"], ["A", "B"])
+            self.assertEqual(config["feature_contract"]["boolean"], ["Flag"])
+            self.assertEqual(config["feature_contract"]["categorical"], ["Kind"])
+
+    def test_config_inheritance_cycle_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            first = root / "first.json"
+            second = root / "second.json"
+            first.write_text('{"extends":"second.json"}', encoding="utf-8")
+            second.write_text('{"extends":"first.json"}', encoding="utf-8")
+
+            with self.assertRaises(DIAGNOSTICS.DiagnosticFailure):
+                DIAGNOSTICS.read_config(first)
+
     def test_stability_requires_same_direction_in_each_run(self) -> None:
         rows = []
         for run_index, run_id in enumerate(("run-a", "run-b")):

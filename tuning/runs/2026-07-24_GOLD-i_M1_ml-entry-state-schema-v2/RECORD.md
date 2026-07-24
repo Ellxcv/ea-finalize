@@ -107,6 +107,9 @@ menjadi retained training data.
 
 ## Required next validation
 
-Kumpulkan ulang dua development window validity 3 dengan config
-`config/ml-dataset-audit-folder32-cci3-v2.json`. Final OOS
-`2026.05.03–2026.07.18` tetap belum boleh dibuka.
+Folder 43–44 sudah mengumpulkan ulang dua development window validity 3. Audit mempertahankan
+1.080/1.080 candidate dengan nol error. Eksperimen Phase 3 tetap gagal membekukan model; hasilnya
+dicatat di
+`tuning/runs/2026-07-24_GOLD-i_M1_cci3-entry-v2-phase3/RECORD.md`.
+
+Final OOS `2026.05.03–2026.07.18` tetap belum boleh dibuka.

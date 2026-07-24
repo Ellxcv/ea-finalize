@@ -143,10 +143,23 @@ dan metrik klasifikasi/recovery ikut memburuk. Compact contract tidak dipromosik
 di [ml-phase3-compact-features.md](ml-phase3-compact-features.md).
 
 Schema v2 entry-state sudah diimplementasikan untuk menguji informasi ADX/DI, CCI velocity,
-volatility expansion, serta indicator distance/slope yang belum tersedia di v1. Training v2 belum
-dimulai. Short logger parity folder 41/42 sudah lulus; berikutnya dua development window validity 3
-harus dikumpulkan ulang dan lolos
-`config/ml-dataset-audit-folder32-cci3-v2.json` sebelum eksperimen v2 dijalankan.
+volatility expansion, serta indicator distance/slope yang belum tersedia di v1. Short logger parity
+folder 41/42 dan training development v2 folder 43–44 sudah selesai.
+
+## Hasil entry-state schema v2
+
+Folder 43–44 menghasilkan 1.080 candidate schema v2 dan audit lulus tanpa error. Karena sample dan
+label sama dengan dataset validity 3 v1, perubahan hasil berasal dari 15 feature entry-state baru.
+
+| Model | ROC-AUC | Brier | Winner rejected | L4+ rejected | Original WR delta | Recovery reduction |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Logistic Regression | 0,4975 | 0,2565 | 8,00% | 8,06% | +0,69 pp | 1,56% |
+| Shallow Random Forest | 0,4898 | 0,2518 | 9,71% | 11,29% | -0,05 pp | -0,08% |
+
+Random Forest menangkap L4+ lebih banyak daripada full v1, tetapi masih jauh di bawah gate 20%,
+tidak memperbaiki original win/recovery, dan winner rejection melampaui 10% pada salah satu fold.
+Model v2 tidak dibekukan. Analisis lengkap:
+[ml-entry-state-v2-analysis.md](ml-entry-state-v2-analysis.md).
 
 ## Interpretasi dan langkah berikutnya
 

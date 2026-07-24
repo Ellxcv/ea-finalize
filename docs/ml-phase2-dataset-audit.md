@@ -16,6 +16,10 @@ Audit tooling mendukung `ts7_entry_candidate_v1` dan `ts7_entry_candidate_v2`, t
 tidak boleh digabung dalam satu output audit. V2 juga mewajibkan `FeatureReadyV2=true`, 15 feature
 entry-state baru tanpa `NA`, dan manifest `entry_state_strength_distance_v2`.
 
+Collection v2 folder 43–44 sudah selesai: 2/2 run diterima, 1.080/1.080 candidate retained, nol
+error, dan dua warning `SYMBOL_MIGRATION_UNVERIFIED`. Processed dataset lokal:
+`folder32-cci3-entry-v2-dataset-v001`.
+
 ## Struktur data lokal
 
 Raw dan processed data wajib berada di luar repository:
