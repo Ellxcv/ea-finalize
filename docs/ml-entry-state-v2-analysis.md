@@ -80,4 +80,10 @@ challenger dua-target:
    imbalance.
 
 Pemilihan threshold harus tetap hanya pada validation fold dan gate wajib dinilai per-fold, bukan
-hanya aggregate. Ini masih eksperimen development; final OOS tetap tersegel.
+hanya aggregate.
+
+Challenger tersebut sudah diimplementasikan dan diuji. Target `NO_RECOVERY` menghasilkan AUC
+0,6075 untuk Logistic Regression dan 0,6220 untuk Random Forest, tetapi target L4-risk hanya
+0,4959 dan 0,4576. Tidak ada fold yang lolos seluruh business gate. Model tidak dibekukan,
+runtime EA tidak diubah, dan final OOS tetap tersegel. Detail:
+[ml-dual-business-targets.md](ml-dual-business-targets.md).

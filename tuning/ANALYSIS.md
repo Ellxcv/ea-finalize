@@ -383,7 +383,7 @@ Untuk setiap run, jawab:
 | 14 | Salah satu confirmation filter redundan dan dapat dihapus | Matikan HiLo, PSAR, ST M1, atau ST M5 satu per run dengan guard OFF | WR/recovery/L4+ membaik tanpa stop-out atau DD rusak | Rejected; PSAR OFF only marginal |
 | 15 | Initial SL berbasis volatilitas mengurangi original loss yang terlalu cepat | Tambahkan mode candle-anchored ATR 14 RMA × 1.4, default-off | WR/recovery membaik tanpa loss size, L4+, PF, atau DD memburuk | Inconclusive; folder 32 changed multiple groups |
 | 16 | Entry-state strength/distance menambah signal prediktif | Tambahkan 15 feature ADX/DI, CCI velocity, ATR, dan indicator geometry | Tolak >=20% L4+ dengan <=10% winner; WR/recovery membaik | Rejected; folders 43–44 only reach 11.29% L4+ |
-| 17 | Barrier label terlalu tidak langsung untuk tujuan bisnis | Challenger target NO_RECOVERY dan L4_PLUS dengan walk-forward validation-only threshold | WR +3 pp, recovery -10%, L4+ rejection >=20%, winner rejection <=10% per fold | Proposed |
+| 17 | Barrier label terlalu tidak langsung untuk tujuan bisnis | Challenger target NO_RECOVERY dan L4_PLUS dengan walk-forward validation-only threshold | WR +3 pp, recovery -10%, L4+ rejection >=20%, winner rejection <=10% per fold | Rejected; no fold passes all gates |
 
 ## Decision log
 
@@ -411,6 +411,8 @@ Untuk setiap run, jawab:
 | 2026-07-24 | ATR initial-stop implementation | Prepare fixed regression and one ATR experiment | Default remains fixed; ATR uses closed-candle high/low plus RMA 14 × 1.4 and actual SL distance for dynamic lot | Backtest folders 32–33 |
 | 2026-07-24 | Folder 32 preset audit | Do not interpret as isolated ATR test; freeze as `folder32_v1` ML baseline | Actual preset used ATR SL plus different entry, session, trailing, and recovery settings, so causality versus folder 25 is unavailable | Use exact manifest for observation-only ML dataset logger |
 | 2026-07-24 | Entry-state v2 folders 43–44 | Do not freeze model or open final OOS | Audit passes 1,080 candidates, but AUC remains random; best L4+ rejection 11.29% and original WR/recovery do not improve | Review direct business-label challenger |
+
+| 2026-07-24 | Dual business-target challenger folders 43-44 | Reject both pairs; keep runtime ML_OFF and final OOS sealed | NO_RECOVERY AUC improves to 0.6075-0.6220, but L4-risk AUC is 0.4576-0.4959 and no fold passes all gates | Gather independent development data or a new depth-specific feature hypothesis |
 
 ## Compound readiness gate
 

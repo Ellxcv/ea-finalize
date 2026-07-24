@@ -560,3 +560,12 @@ Model pertama selesai bila:
 - model/schema memiliki version, checksum, dan rollback.
 
 Jika salah satu syarat kritis gagal, EA tetap menggunakan `ML_OFF`.
+
+## Hasil challenger target bisnis langsung
+
+Pipeline target `NO_RECOVERY` dan `RECOVERY_L4_PLUS` sudah diimplementasikan dengan class
+balancing train-only, probability calibration, serta dual-threshold validation-only. Eksperimen
+development folder 43-44 ditolak: signal no-recovery menjanjikan, tetapi L4-risk tidak stabil dan
+tidak ada fold yang lolos seluruh gate. Karena itu runtime tetap `ML_OFF` dan final OOS belum
+dibuka. Kontrak dan hasil lengkap ada di
+[ml-dual-business-targets.md](ml-dual-business-targets.md).

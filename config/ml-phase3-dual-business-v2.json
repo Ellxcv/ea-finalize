@@ -1,0 +1,53 @@
+{
+  "extends": "ml-phase3-baseline-v2.json",
+  "config_version": "ts7_ml_phase3_dual_business_v2",
+  "dual_targets": {
+    "no_recovery": {
+      "positive_outcomes": [
+        "NO_RECOVERY"
+      ],
+      "balance_training": false,
+      "balance_seed": 240701
+    },
+    "l4_risk": {
+      "positive_outcomes": [
+        "RECOVERY_L4_PLUS"
+      ],
+      "balance_training": true,
+      "balance_seed": 240702
+    }
+  },
+  "model_pairings": [
+    {
+      "name": "logistic_pair",
+      "no_recovery_model": "logistic_regression",
+      "l4_risk_model": "logistic_regression"
+    },
+    {
+      "name": "forest_pair",
+      "no_recovery_model": "shallow_random_forest",
+      "l4_risk_model": "shallow_random_forest"
+    }
+  ],
+  "dual_threshold_selection": {
+    "max_candidates_per_target": 64,
+    "minimum_retained_fraction": 0.5,
+    "winner_rejection_max": 0.1,
+    "active_day_retention_min": 0.8,
+    "objective_order": [
+      "relative_recovery_rate_reduction",
+      "original_win_rate_delta",
+      "relative_l4_given_recovery_reduction",
+      "l4_plus_rejection_rate"
+    ]
+  },
+  "acceptance_gates": {
+    "minimum_retained_fraction": 0.5,
+    "winner_rejection_max": 0.1,
+    "active_day_retention_min": 0.8,
+    "original_win_rate_delta_min": 0.03,
+    "relative_recovery_rate_reduction_min": 0.1,
+    "l4_plus_rejection_min": 0.2,
+    "relative_l4_given_recovery_reduction_min": 0.2
+  }
+}

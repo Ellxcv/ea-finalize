@@ -161,6 +161,12 @@ tidak memperbaiki original win/recovery, dan winner rejection melampaui 10% pada
 Model v2 tidak dibekukan. Analisis lengkap:
 [ml-entry-state-v2-analysis.md](ml-entry-state-v2-analysis.md).
 
+Challenger dua target bisnis kemudian diuji pada dataset yang sama. Ranking target
+`NO_RECOVERY` membaik menjadi AUC 0,6075-0,6220, tetapi L4-risk tetap setara atau lebih buruk
+dari random dan tidak ada fold yang lolos seluruh gate. Challenger berstatus
+`REJECTED_NOT_FROZEN`; final OOS tidak dibuka. Lihat
+[ml-dual-business-targets.md](ml-dual-business-targets.md).
+
 ## Interpretasi dan langkah berikutnya
 
 Hasil lemah belum membuktikan ML tidak berguna. Dataset 982 candidate berada pada batas eksplorasi
