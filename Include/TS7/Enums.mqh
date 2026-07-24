@@ -70,7 +70,14 @@ enum ENUM_RECOVERY_GRID_STEP_MODE
 enum ENUM_MAIN_LOT_MODE
   {
    MAIN_LOT_FIXED   = 0, // Use InpLotSize
-   MAIN_LOT_DYNAMIC = 1  // Risk-based lot from equity and StopLossPoints
+   MAIN_LOT_DYNAMIC = 1  // Risk-based lot from equity and actual initial SL distance
+  };
+
+//--- Enum Main Strategy Initial Stop Loss Mode
+enum ENUM_MAIN_STOP_LOSS_MODE
+  {
+   MAIN_SL_FIXED_POINTS = 0, // Legacy fixed distance from entry
+   MAIN_SL_ATR_CANDLE   = 1  // Previous closed candle high/low plus ATR distance
   };
 
 //--- Enum Main Signal Re-entry Mode

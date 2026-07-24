@@ -54,6 +54,18 @@ Hasil Strategy Tester dan analisis tuning disimpan di folder [tuning](tuning/REA
 Gunakan template yang tersedia agar setiap eksperimen dapat dibandingkan berdasarkan kualitas
 strategy original, frekuensi recovery, kedalaman recovery, drawdown, dan kesiapan compound.
 
+## Machine learning
+
+Rencana meta-filter entry original tersedia di
+[docs/machine-learning-plan.md](docs/machine-learning-plan.md). Konfigurasi dataset awal dibekukan
+sebagai `folder32_v1` di
+[docs/ml-folder32-v1-baseline.md](docs/ml-folder32-v1-baseline.md). Implementasi ML harus dimulai
+dari logger observation-only dan tidak boleh mengubah keputusan trading baseline.
+Kontrak output logger Fase 1 tersedia di
+[docs/ml-entry-candidate-v1-schema.md](docs/ml-entry-candidate-v1-schema.md).
+Pipeline historical dataset Fase 2 tersedia di
+[docs/ml-phase2-dataset-audit.md](docs/ml-phase2-dataset-audit.md).
+
 ## Status publikasi
 
 Source indikator eksternal pada folder lokal requirement/ sengaja tidak dimasukkan. Lisensi dan

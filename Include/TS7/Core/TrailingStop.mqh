@@ -39,7 +39,14 @@ void ManageTrailingStop()
          // Trailing mulai aktif setelah profit >= TrailingStart
          if(profitPoints >= InpTrailingStartPoints)
            {
-            double newSL = NormalizeDouble(bid - InpTrailingDistancePoints * _Point, _Digits);
+            double newSL = bid - InpTrailingDistancePoints * _Point;
+            if(InpTrailingBreakEvenOffsetPoints > 0)
+              {
+               double breakEvenFloor = openPrice
+                                       + InpTrailingBreakEvenOffsetPoints * _Point;
+               newSL = MathMax(newSL, breakEvenFloor);
+              }
+            newSL = NormalizeDouble(newSL, _Digits);
 
             // Hanya geser SL jika lebih tinggi dari current SL (atau belum ada SL)
             // Dan perubahan minimal TrailingStep
@@ -61,7 +68,14 @@ void ManageTrailingStop()
 
          if(profitPoints >= InpTrailingStartPoints)
            {
-            double newSL = NormalizeDouble(ask + InpTrailingDistancePoints * _Point, _Digits);
+            double newSL = ask + InpTrailingDistancePoints * _Point;
+            if(InpTrailingBreakEvenOffsetPoints > 0)
+              {
+               double breakEvenCeiling = openPrice
+                                         - InpTrailingBreakEvenOffsetPoints * _Point;
+               newSL = MathMin(newSL, breakEvenCeiling);
+              }
+            newSL = NormalizeDouble(newSL, _Digits);
 
             // Untuk sell, SL baru harus lebih rendah dari current SL
             if(newSL < currentSL || currentSL == 0.0)

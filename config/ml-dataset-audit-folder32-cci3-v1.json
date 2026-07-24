@@ -1,0 +1,82 @@
+{
+  "schema_version": "ts7_entry_candidate_v1",
+  "expected_strategy_version": "folder32_cci3_v1",
+  "expected_preset_sha256": "7CA8B8F6C99073EC78147B42EFD347E7B0A1972EA834CD18897E0F5EAFBAB635",
+  "expected_symbol": "GOLD.i#",
+  "expected_timeframe": "M1",
+  "expected_test_windows": [
+    {
+      "from": "2025.05.01",
+      "to": "2025.08.31"
+    },
+    {
+      "from": "2025.09.01",
+      "to": "2026.01.03"
+    },
+    {
+      "from": "2026.01.04",
+      "to": "2026.05.02"
+    }
+  ],
+  "expected_initial_deposit": 4000.0,
+  "expected_currency": "USD",
+  "expected_leverage": "1:500",
+  "minimum_history_quality_percent": 99.0,
+  "accepted_termination_statuses": [
+    "COMPLETED"
+  ],
+  "source_revision_pattern": "^[0-9a-fA-F]{7,40}$",
+  "require_collection_context": true,
+  "required_tester_model": "EVERY_TICK_BASED_ON_REAL_TICKS",
+  "expected_dependency_sha256": {
+    "accountStatus/accountStatus.ex5": "3305D5DD70EA2EE766D7C85F7C5802A72371965ED74CC58F9F5C97A73689525D",
+    "cciCustomFix/cciCustomFix.ex5": "A2A2E46623D8E436E3E9BF51094824EE0FD4753549F1AF06838D557A3EF2E734",
+    "hiloFix/hiloFix.ex5": "DEE2185DE717E2CE7AE646D52545DF1A473E24D37F47BC715063EF2290FB92A7",
+    "parabolicSarFix/parabolicSarFix.ex5": "83A3339EBEFC4501DC48579D8ECAACED221D4315F215E8A4A31907DAD485275F",
+    "superTrend/superTrend.ex5": "711699DBE3E2D50B28BECCAAE8A1E787C9C643E98EDF1D1595C8E86F2F20F78C"
+  },
+  "financial_tolerance": 0.02,
+  "price_tolerance": 0.011,
+  "required_barrier_horizons": [
+    40,
+    50
+  ],
+  "binary_barrier_outcomes": [
+    "FAVORABLE_FIRST",
+    "ADVERSE_FIRST"
+  ],
+  "accepted_business_outcomes": [
+    "NO_RECOVERY",
+    "RECOVERY_L1_L3",
+    "RECOVERY_L4_PLUS",
+    "INCOMPLETE"
+  ],
+  "unverified_data_integrity_flags": [
+    "SYMBOL_MIGRATION_UNVERIFIED"
+  ],
+  "duplicate_policy": "keep_first_identical",
+  "minimum_rule_group_size": 20,
+  "numeric_rule_features": [
+    "SignalAgeBars",
+    "SpreadATR",
+    "ConfirmationsAtSignal",
+    "HiLoLatencyBars",
+    "PsarLatencyBars",
+    "STLatencyBars",
+    "STMTFLatencySeconds",
+    "DisplacementATR",
+    "PreEntryMFEATR",
+    "PreEntryMAEATR",
+    "DistanceEMAATR",
+    "DirectionalRoomATR"
+  ],
+  "categorical_rule_features": [
+    "Direction",
+    "CciSignalType",
+    "LateConfirmMask",
+    "AsiaSession",
+    "LondonSession",
+    "NewYorkSession",
+    "DataIntegrityFlag"
+  ]
+}

@@ -263,6 +263,48 @@ bool CreateAllHandles(SHandles &handles)
         }
      }
 
+//--- Observation-only ATR snapshot for original-trade diagnostics
+   if(InpEnableOriginalTradeDiagnostics)
+     {
+      int diagnosticAtrPeriod = MathMax(1, InpOriginalDiagAtrPeriod);
+      handles.originalDiagATR = iATR(_Symbol, _Period, diagnosticAtrPeriod);
+      if(handles.originalDiagATR == INVALID_HANDLE)
+        {
+         Print("WARNING: [ORIGINAL_DIAG] Failed creating ATR handle. Error=", GetLastError(),
+               ". MFE/MAE logging remains active with EntryATRPoints=0.");
+        }
+
+      int diagnosticEmaPeriod = MathMax(1, InpOriginalDiagEmaPeriod);
+      handles.originalDiagEMA = iMA(_Symbol, _Period, diagnosticEmaPeriod, 0,
+                                    MODE_EMA, PRICE_CLOSE);
+      if(handles.originalDiagEMA == INVALID_HANDLE)
+        {
+         Print("WARNING: [ORIGINAL_DIAG] Failed creating EMA handle. Error=", GetLastError(),
+               ". Entry context will be marked not ready.");
+        }
+     }
+
+//--- Observation-only handles for the ML entry-candidate schema
+   if(InpEnableMlDatasetLogger)
+     {
+      ENUM_TIMEFRAMES mlAdxTf = (InpAdxTimeframe == PERIOD_CURRENT)
+                                ? (ENUM_TIMEFRAMES)_Period
+                                : InpAdxTimeframe;
+      handles.mlBarrierATR = iATR(_Symbol, PERIOD_M1, 14);
+      handles.mlATR_M5 = iATR(_Symbol, PERIOD_M5, 14);
+      handles.mlEMA = iMA(_Symbol, PERIOD_M1, 50, 0, MODE_EMA, PRICE_CLOSE);
+      handles.mlADX = iADX(_Symbol, mlAdxTf, InpAdxDmiPeriod);
+      if(handles.mlBarrierATR == INVALID_HANDLE ||
+         handles.mlATR_M5 == INVALID_HANDLE ||
+         handles.mlEMA == INVALID_HANDLE ||
+         handles.mlADX == INVALID_HANDLE)
+        {
+         Print("ERROR: [ML_DATASET] Failed creating ATR/EMA/ADX handles. Error=",
+               GetLastError());
+         return false;
+        }
+     }
+
    return true;
   }
 
@@ -286,6 +328,12 @@ void ReleaseAllHandles(SHandles &handles)
    if(handles.algoZone != INVALID_HANDLE)    { IndicatorRelease(handles.algoZone);    handles.algoZone = INVALID_HANDLE; }
    if(handles.distEmaFast != INVALID_HANDLE) { IndicatorRelease(handles.distEmaFast); handles.distEmaFast = INVALID_HANDLE; }
    if(handles.distEmaSlow != INVALID_HANDLE) { IndicatorRelease(handles.distEmaSlow); handles.distEmaSlow = INVALID_HANDLE; }
+   if(handles.originalDiagATR != INVALID_HANDLE) { IndicatorRelease(handles.originalDiagATR); handles.originalDiagATR = INVALID_HANDLE; }
+   if(handles.originalDiagEMA != INVALID_HANDLE) { IndicatorRelease(handles.originalDiagEMA); handles.originalDiagEMA = INVALID_HANDLE; }
+   if(handles.mlBarrierATR != INVALID_HANDLE) { IndicatorRelease(handles.mlBarrierATR); handles.mlBarrierATR = INVALID_HANDLE; }
+   if(handles.mlATR_M5 != INVALID_HANDLE) { IndicatorRelease(handles.mlATR_M5); handles.mlATR_M5 = INVALID_HANDLE; }
+   if(handles.mlEMA != INVALID_HANDLE) { IndicatorRelease(handles.mlEMA); handles.mlEMA = INVALID_HANDLE; }
+   if(handles.mlADX != INVALID_HANDLE) { IndicatorRelease(handles.mlADX); handles.mlADX = INVALID_HANDLE; }
   }
 
 #endif // TS7_CORE_HANDLE_MANAGER_MQH

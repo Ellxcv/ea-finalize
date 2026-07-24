@@ -6,8 +6,9 @@
 #define TS7_RECOVERY_MANAGER_MQH
 
 //+------------------------------------------------------------------+
-void ResetRecoveryState()
+void ResetRecoveryState(const string completionReason)
   {
+   MlFinalizeRecoveryCycleFromReset(completionReason);
    g_recoveryActive       = false;
    g_recoveryPendingStart = false;
    g_recoveryPendingLossAmount = 0.0;
@@ -309,7 +310,7 @@ void HandleRecoveryZone()
             Print("INFO: Recovery finished! Profit=", DoubleToString(totalProfit, 2),
                   " Target=", DoubleToString(g_recoveryTargetProfit, 2),
                   " Steps=", g_recoveryStepCount);
-            ResetRecoveryState();
+            ResetRecoveryState("TARGET_REACHED");
            }
          else
            {
@@ -337,7 +338,7 @@ void HandleRecoveryZone()
                " Steps=", g_recoveryStepCount, ". Force closing all recovery positions.");
          CloseAllRecoveryPositions();
          DeleteRecoveryPendingOrders();
-         ResetRecoveryState();
+         ResetRecoveryState("MAX_DRAWDOWN");
          g_closingRecoveryPositions = false;
          return;
         }

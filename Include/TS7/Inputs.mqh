@@ -25,6 +25,29 @@ input group "CCI Settings"
 input int    InpCciLength              = 11;         // CCI length
 input int    InpCiLength               = 5;          // CI smoothing length
 
+input group "Original Trade Diagnostics"
+input bool   InpEnableOriginalTradeDiagnostics = false; // Log original-trade MFE/MAE without changing trading
+input int    InpOriginalDiagAtrPeriod  = 14;          // ATR period captured at original entry
+input int    InpOriginalDiagEmaPeriod  = 50;          // EMA period for entry distance telemetry
+input bool   InpEnableOriginalStructureDiagnostics = false; // Log confirmed-pivot S/R at original entry
+input ENUM_TIMEFRAMES InpOriginalStructureTimeframe = PERIOD_M1; // Explicit structure telemetry timeframe
+input int    InpOriginalStructureLeftBars = 10;       // Older bars required to form a pivot
+input int    InpOriginalStructureRightBars = 10;      // Closed newer bars required to confirm a pivot
+input int    InpOriginalStructureHistoryBars = 1500;  // Bars scanned for structure state
+
+input group "ML Dataset Logger (Observation Only)"
+input bool   InpEnableMlDatasetLogger = false;         // Export candidate/outcome CSV without changing trades
+input string InpMlStrategyVersion = "folder32_v1";     // Frozen strategy/preset identifier
+input string InpMlSourceRevision = "";                 // Git commit/tag used to build this EA
+input string InpMlPresetHash = "737EF0B78C358EE2D98BD54BA82F06E6C67010E09A12B95E2F05F061438C1651"; // Frozen preset SHA-256
+input string InpMlRunId = "";                          // Optional unique run ID (empty=auto)
+input string InpMlDatasetDirectory = "TS7_ML";         // Relative Terminal Common Files directory
+input string InpMlDataIntegrityFlag = "SYMBOL_MIGRATION_UNVERIFIED"; // Dataset provenance flag
+input int    InpMlFlushEveryRecords = 50;              // Flush CSV buffers every N written records
+
+input group "Late Confirmation Guard"
+input bool   InpEnableLateConfirmationGuard = false;  // Block symmetric HiLo+ST M1 late-confirm pattern
+
 input group "SuperTrend Settings"
 input bool   InpUseMainSuperTrendFilter = true;      // Main strategy: use SuperTrend confirmation
 input int    InpSuperTrendAtrPeriod    = 50;         // SuperTrend ATR period
@@ -71,13 +94,18 @@ input int    InpNewYorkEndHour         = 23;         // New York end hour
 input int    InpNewYorkEndMinute       = 55;          // New York end minute
 
 input group "Risk Management"
+input ENUM_MAIN_STOP_LOSS_MODE InpMainStopLossMode = MAIN_SL_FIXED_POINTS; // Original initial SL mode
 input int    InpStopLossPoints         = 500;        // Stop Loss (points) = 50 pips
+input ENUM_TIMEFRAMES InpMainStopAtrTimeframe = PERIOD_CURRENT; // ATR candle timeframe
+input int    InpMainStopAtrPeriod      = 14;         // ATR RMA period
+input double InpMainStopAtrMultiplier  = 1.4;        // ATR distance beyond closed candle high/low
 input int    InpTakeProfitPoints       = 0;       // Take Profit (points) = 200 pips
 
 input group "Trailing Stop"
 input int    InpTrailingStartPoints    = 500;        // Start trailing after (points)
 input int    InpTrailingStepPoints     = 500;        // Move every (points)
 input int    InpTrailingDistancePoints = 500;        // SL distance when trailing (points)
+input int    InpTrailingBreakEvenOffsetPoints = 0;   // Minimum locked profit after trailing starts (0=legacy)
 
 input group "ADX Filter"
 input bool   InpEnableAdxFilter        = false;      // Enable ADX filter
