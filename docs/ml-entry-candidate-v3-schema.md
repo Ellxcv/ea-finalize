@@ -1,6 +1,6 @@
 # ML Entry-Candidate Schema v3
 
-Status: **implemented and compiled; Strategy Tester parity pending**
+Status: **implemented, compiled, and Strategy Tester parity passed**
 
 ## Purpose
 
@@ -94,8 +94,13 @@ Only families stable across chronological folds may enter a later combined chall
 
 ## Required Strategy Tester validation
 
-1. Short logger-OFF versus logger-ON parity on the same preset and period.
-2. Confirm identical trades, deals, net profit, and drawdown.
-3. Confirm candidate header has 128 columns and every retained candidate is v3-ready.
-4. If parity passes, repeat the two existing high-quality development periods with logger ON.
+1. Short logger-OFF versus logger-ON parity on the same preset and period: passed.
+2. Trades, deals, net profit, and drawdown: identical.
+3. Candidate header: 128 columns; 37 of 38 smoke-test candidates retained as v3-ready.
+4. Repeat the two existing high-quality development periods with logger ON.
 5. Audit both runs together; do not open final OOS.
+
+The one excluded smoke-test candidate had no bounded pair of confirmed support and resistance in
+the configured historical scan. This is represented by `FeatureReadyV3=false` and `NA` structure
+fields, then excluded rather than imputed. Full-period collection must report this exclusion rate
+before model training.
