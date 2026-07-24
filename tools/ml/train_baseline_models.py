@@ -10,6 +10,7 @@ import json
 import math
 import random
 import shutil
+import statistics
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -210,6 +211,11 @@ def validate_config(config: Mapping[str, Any]) -> None:
     leakage = feature_names & groups["forbidden"]
     if leakage:
         raise TrainingFailure("Forbidden leakage feature enabled: " + ", ".join(sorted(leakage)))
+    allow_missing = set(contract.get("numeric_allow_missing", []))
+    if not allow_missing <= groups["numeric"]:
+        raise TrainingFailure(
+            "numeric_allow_missing must be a subset of numeric features"
+        )
     split = config["split"]
     if int(split["fold_count"]) < 2:
         raise TrainingFailure("fold_count must be at least 2")
@@ -343,6 +349,8 @@ class Preprocessor:
     categorical: list[str]
     means: dict[str, float]
     standard_deviations: dict[str, float]
+    numeric_allow_missing: set[str]
+    imputation_values: dict[str, float]
     levels: dict[str, list[str]]
     expanded_features: list[str]
 
@@ -355,14 +363,27 @@ class Preprocessor:
         numeric = list(contract["numeric"])
         boolean = list(contract["boolean"])
         categorical = list(contract["categorical"])
+        allow_missing = set(contract.get("numeric_allow_missing", []))
         means: dict[str, float] = {}
         deviations: dict[str, float] = {}
+        imputation_values: dict[str, float] = {}
         for field in numeric:
-            values = [parse_float(row[field], field) for row in rows]
+            values = [
+                parse_float(row[field], field)
+                for row in rows
+                if field not in allow_missing
+                or row[field] not in ("", "NA", None)
+            ]
+            if not values:
+                raise TrainingFailure(
+                    f"Optional numeric feature {field} has no observed training values"
+                )
             field_mean = mean(values)
             variance = mean([(value - field_mean) ** 2 for value in values])
             means[field] = field_mean
             deviations[field] = math.sqrt(variance) if variance > EPSILON else 1.0
+            if field in allow_missing:
+                imputation_values[field] = float(statistics.median(values))
         levels = {
             field: sorted({str(row[field]) for row in rows})
             for field in categorical
@@ -371,14 +392,23 @@ class Preprocessor:
         expanded.extend(f"bool:{field}" for field in boolean)
         for field in categorical:
             expanded.extend(f"cat:{field}={level}" for level in levels[field])
-        return cls(numeric, boolean, categorical, means, deviations, levels, expanded)
+        return cls(
+            numeric, boolean, categorical, means, deviations,
+            allow_missing, imputation_values, levels, expanded,
+        )
 
     def transform(self, row: Mapping[str, str]) -> list[float]:
-        values = [
-            (parse_float(row[field], field) - self.means[field])
-            / self.standard_deviations[field]
-            for field in self.numeric
-        ]
+        values = []
+        for field in self.numeric:
+            raw = row[field]
+            if raw in ("", "NA", None) and field in self.numeric_allow_missing:
+                parsed = self.imputation_values[field]
+            else:
+                parsed = parse_float(raw, field)
+            values.append(
+                (parsed - self.means[field])
+                / self.standard_deviations[field]
+            )
         values.extend(parse_bool(row[field], field) for field in self.boolean)
         for field in self.categorical:
             actual = str(row[field])
@@ -392,6 +422,9 @@ class Preprocessor:
             "categorical": self.categorical,
             "means": self.means,
             "standard_deviations": self.standard_deviations,
+            "numeric_missing_policy": "training_median",
+            "numeric_allow_missing": sorted(self.numeric_allow_missing),
+            "imputation_values_fit_on_train_only": self.imputation_values,
             "categorical_levels_fit_on_train_only": self.levels,
             "expanded_features": self.expanded_features,
         }

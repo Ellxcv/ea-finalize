@@ -82,10 +82,9 @@ Run ID:
 - `FeatureReady`, `FeatureReadyV2`, `StructureReady`, and `SessionDistanceReady` are true for all
   38 candidates.
 - `FeatureReadyV3` is true for 37 of 38 candidates (97.37%).
-- The excluded candidate at `2026.01.09 18:24:00` is a SELL for which the bounded dynamic
+- The structure-incomplete candidate at `2026.01.09 18:24:00` is a SELL for which the bounded dynamic
   structure scan cannot find both a confirmed support below price and resistance above price.
-  Its structure fields are `NA` and the audit excludes it by contract; no silent imputation is
-  used.
+  Its structure fields are `NA`.
 - Every populated v3 numeric value is finite. No v3 feature is wholly missing or constant across
   the retained smoke-test rows.
 
@@ -94,7 +93,8 @@ Business labels in this short parity window are 17 `NO_RECOVERY`, 19 `RECOVERY_L
 
 ## Decision and next run
 
-Accept schema v3 for full development-data collection. The single structure-boundary exclusion is
-expected under the declared readiness contract and will be measured again over the two complete
-periods. Use the exact retained build and folder32 CCI-validity-3 preset; do not use locally
-modified `Inputs.mqh` defaults as the experiment definition.
+Accept schema v3 for full development-data collection. The single missing structure boundary is
+expected and will be measured again over the two complete periods. The later full audit retains
+structure-incomplete candidates for non-structure experiments so scarce L4+ labels are not lost.
+Use the exact retained build and folder32 CCI-validity-3 preset; do not use locally modified
+`Inputs.mqh` defaults as the experiment definition.

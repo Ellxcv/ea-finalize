@@ -85,6 +85,17 @@ CANDIDATE_V3_FEATURES = (
     "SupportTouchCount", "ResistanceTouchCount", "StructureWidthATR",
     "TrappedBetweenLevels",
 )
+CANDIDATE_V3_STRUCTURE_FEATURES = (
+    "NearestSupportDistanceATR", "NearestResistanceDistanceATR",
+    "DirectionalLevelRoomATR", "OpposingLevelDistanceATR",
+    "SupportAgeBars", "ResistanceAgeBars", "SupportTouchCount",
+    "ResistanceTouchCount", "StructureWidthATR", "TrappedBetweenLevels",
+)
+CANDIDATE_V3_NON_STRUCTURE_FEATURES = tuple(
+    feature
+    for feature in CANDIDATE_V3_FEATURES
+    if feature not in CANDIDATE_V3_STRUCTURE_FEATURES
+)
 CANDIDATE_HEADER_V3 = (
     CANDIDATE_HEADER_V2[:-1]
     + ("FeatureReadyV3",)
@@ -147,7 +158,7 @@ BASE_REQUIRED_FEATURES = (
 )
 BASE_REQUIRED_FEATURES_V2 = BASE_REQUIRED_FEATURES + CANDIDATE_V2_FEATURES
 BASE_REQUIRED_FEATURES_V3 = (
-    BASE_REQUIRED_FEATURES_V2 + CANDIDATE_V3_FEATURES
+    BASE_REQUIRED_FEATURES_V2 + CANDIDATE_V3_NON_STRUCTURE_FEATURES
 )
 
 MERGED_LABEL_HEADER = (
@@ -809,8 +820,6 @@ def validate_candidates(
     ready_fields = ["FeatureReady"]
     if schema_version in (SCHEMA_VERSION_V2, SCHEMA_VERSION_V3):
         ready_fields.append("FeatureReadyV2")
-    if schema_version == SCHEMA_VERSION_V3:
-        ready_fields.append("FeatureReadyV3")
     for setup_id, row in candidates.items():
         for field_name in ("CandidateTime", "CandidateBarTime", "SignalTime"):
             if parse_time(row[field_name]) is None:
@@ -828,6 +837,24 @@ def validate_candidates(
                 setup_id,
             )
             audit.excluded[setup_id].add("required_feature_missing")
+        if schema_version == SCHEMA_VERSION_V3:
+            v3_ready = parse_bool(row["FeatureReadyV3"])
+            if v3_ready is None:
+                add_issue(
+                    audit, "ERROR", "INVALID_BOOLEAN",
+                    "FeatureReadyV3 must be true or false", setup_id,
+                )
+                audit.excluded[setup_id].add("invalid_feature_ready_v3")
+            elif v3_ready and any(
+                row[field] == "NA"
+                for field in CANDIDATE_V3_STRUCTURE_FEATURES
+            ):
+                add_issue(
+                    audit, "ERROR", "READY_FEATURE_MISSING",
+                    "FeatureReadyV3 is true but a structure feature is NA",
+                    setup_id,
+                )
+                audit.excluded[setup_id].add("required_feature_missing")
         if parse_int(row["Direction"]) not in (-1, 1):
             add_issue(audit, "ERROR", "INVALID_DIRECTION", "Direction must be -1 or 1", setup_id)
             audit.excluded[setup_id].add("invalid_direction")

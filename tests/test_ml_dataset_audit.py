@@ -388,7 +388,7 @@ class DatasetAuditTests(unittest.TestCase):
             AUDIT.CANDIDATE_HEADER_V3 + AUDIT.MERGED_LABEL_HEADER,
         )
 
-    def test_v3_readiness_false_excludes_candidate(self) -> None:
+    def test_v3_incomplete_structure_retains_non_structure_features(self) -> None:
         raw_root = self.root / "raw"
         raw_root.mkdir()
         run_dir = create_run(raw_root, "run-v3")
@@ -397,6 +397,27 @@ class DatasetAuditTests(unittest.TestCase):
         with candidate_path.open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
         rows[0]["FeatureReadyV3"] = "false"
+        for field in AUDIT.CANDIDATE_V3_STRUCTURE_FEATURES:
+            rows[0][field] = (
+                "false" if field == "TrappedBetweenLevels" else "NA"
+            )
+        write_csv(candidate_path, AUDIT.CANDIDATE_HEADER_V3, rows)
+        self.config["schema_version"] = AUDIT.SCHEMA_VERSION_V3
+
+        report = self.run_audit(raw_root)
+
+        self.assertEqual(report["totals"]["retained_candidates"], 1)
+        self.assertEqual(report["totals"]["excluded_candidates"], 0)
+
+    def test_v3_missing_non_structure_feature_excludes_candidate(self) -> None:
+        raw_root = self.root / "raw"
+        raw_root.mkdir()
+        run_dir = create_run(raw_root, "run-v3")
+        upgrade_run_to_v3(run_dir)
+        candidate_path = run_dir / "candidate_setups.csv"
+        with candidate_path.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        rows[0]["AtrRatioMean50"] = "NA"
         write_csv(candidate_path, AUDIT.CANDIDATE_HEADER_V3, rows)
         self.config["schema_version"] = AUDIT.SCHEMA_VERSION_V3
 
@@ -444,6 +465,28 @@ class DatasetAuditTests(unittest.TestCase):
             set(AUDIT.CANDIDATE_V2_FEATURES).issubset(
                 config["numeric_rule_features"]
             )
+        )
+
+    def test_cci3_v3_project_config_freezes_provenance(self) -> None:
+        config = json.loads(
+            (
+                REPO_ROOT
+                / "config"
+                / "ml-dataset-audit-folder32-cci3-v3.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        AUDIT.validate_config(config)
+
+        self.assertEqual(config["schema_version"], AUDIT.SCHEMA_VERSION_V3)
+        self.assertEqual(
+            config["expected_source_revision"],
+            "0fa72ffd879cfc2f086d2de393bd0fe443654e66",
+        )
+        self.assertTrue(
+            set(AUDIT.CANDIDATE_V3_FEATURES)
+            - {"TrappedBetweenLevels"}
+            <= set(config["numeric_rule_features"])
         )
 
     def test_expected_source_revision_mismatch_rejects_run(self) -> None:

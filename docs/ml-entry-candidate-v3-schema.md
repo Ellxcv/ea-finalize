@@ -1,6 +1,6 @@
 # ML Entry-Candidate Schema v3
 
-Status: **implemented, compiled, and Strategy Tester parity passed**
+Status: **full development collection audited; staged challengers rejected**
 
 ## Purpose
 
@@ -69,15 +69,28 @@ trapped-width threshold.
 
 ## Readiness
 
-`FeatureReadyV3=true` requires:
+`FeatureReadyV3=true` means:
 
 - all v2 features ready;
 - 200 valid closed ATR values;
 - 202 closed M1 price bars;
 - both a confirmed support below price and resistance above price.
 
-Candidates with false readiness or `NA` required fields are excluded by the audit instead of
-being imputed silently.
+`FeatureReady`, `FeatureReadyV2`, and the non-structure v3 families remain mandatory. A candidate
+with complete volatility, durability, and momentum values is retained even when
+`FeatureReadyV3=false`, because that flag can be false solely when the bounded structure scan
+cannot find both sides. Its structure fields remain `NA`.
+
+Core, volatility, durability, and momentum experiments do not consume those missing structure
+fields. The structure experiment:
+
+- includes `FeatureReadyV3` as an availability flag;
+- imputes only the nine numeric structure fields that may be `NA`;
+- calculates each imputation median from the training partition of the current walk-forward fold;
+- never derives an imputation value from validation or evaluation data.
+
+This preserves scarce L4+ examples without presenting an imputed value as an observed market
+level.
 
 ## Staged experiment configs
 
@@ -96,11 +109,11 @@ Only families stable across chronological folds may enter a later combined chall
 
 1. Short logger-OFF versus logger-ON parity on the same preset and period: passed.
 2. Trades, deals, net profit, and drawdown: identical.
-3. Candidate header: 128 columns; 37 of 38 smoke-test candidates retained as v3-ready.
-4. Repeat the two existing high-quality development periods with logger ON.
-5. Audit both runs together; do not open final OOS.
+3. Candidate header: 128 columns; 37 of 38 smoke-test candidates have complete structure.
+4. Two high-quality development periods with logger ON: completed.
+5. Joint audit: 1,080/1,080 retained, zero errors; final OOS remains sealed.
 
-The one excluded smoke-test candidate had no bounded pair of confirmed support and resistance in
-the configured historical scan. This is represented by `FeatureReadyV3=false` and `NA` structure
-fields, then excluded rather than imputed. Full-period collection must report this exclusion rate
-before model training.
+Across the full collection, 75/1,080 candidates (6.94%) lack a bounded pair of confirmed support
+and resistance. They include five L4+ cycles, so globally excluding them would violate the
+scarce-L4 retention requirement. All 75 remain available to non-structure families and use the
+fold-local structure policy above only in the structure experiment.

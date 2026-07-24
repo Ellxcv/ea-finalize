@@ -174,6 +174,14 @@ class DualBusinessModelTests(unittest.TestCase):
             "TrappedBetweenLevels",
             structure["feature_contract"]["boolean"],
         )
+        self.assertIn(
+            "FeatureReadyV3",
+            structure["feature_contract"]["boolean"],
+        )
+        self.assertEqual(
+            set(structure["feature_contract"]["numeric_allow_missing"]),
+            expected_additions["structure"],
+        )
 
     def test_class_balancing_is_deterministic_and_balanced(self) -> None:
         matrix = [[float(index)] for index in range(10)]

@@ -206,6 +206,29 @@ class BaselineModelTests(unittest.TestCase):
         self.assertEqual(preprocessor.levels["Kind"], ["A", "B"])
         self.assertEqual(transformed[-2:], [0.0, 0.0])
 
+    def test_preprocessor_imputes_allowed_numeric_from_train_only(self) -> None:
+        contract = {
+            "numeric": ["Complete", "Optional"],
+            "numeric_allow_missing": ["Optional"],
+            "boolean": ["Available"],
+            "categorical": [],
+        }
+        train = [
+            {"Complete": "1", "Optional": "10", "Available": "true"},
+            {"Complete": "3", "Optional": "NA", "Available": "false"},
+            {"Complete": "5", "Optional": "30", "Available": "true"},
+        ]
+
+        preprocessor = TRAIN.Preprocessor.fit(train, contract)
+        transformed = preprocessor.transform(
+            {"Complete": "7", "Optional": "NA", "Available": "false"}
+        )
+
+        self.assertEqual(preprocessor.imputation_values["Optional"], 20.0)
+        self.assertEqual(preprocessor.means["Optional"], 20.0)
+        self.assertEqual(transformed[1], 0.0)
+        self.assertEqual(transformed[2], 0.0)
+
     def test_threshold_search_enforces_winner_rejection_limit(self) -> None:
         rows = [
             {

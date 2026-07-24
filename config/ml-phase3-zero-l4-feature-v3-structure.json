@@ -41,10 +41,22 @@
       "ResistanceTouchCount",
       "StructureWidthATR"
     ],
+    "numeric_allow_missing": [
+      "NearestSupportDistanceATR",
+      "NearestResistanceDistanceATR",
+      "DirectionalLevelRoomATR",
+      "OpposingLevelDistanceATR",
+      "SupportAgeBars",
+      "ResistanceAgeBars",
+      "SupportTouchCount",
+      "ResistanceTouchCount",
+      "StructureWidthATR"
+    ],
     "boolean": [
       "AsiaSession",
       "LondonSession",
       "NewYorkSession",
+      "FeatureReadyV3",
       "TrappedBetweenLevels"
     ]
   }
