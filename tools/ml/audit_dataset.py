@@ -170,7 +170,9 @@ def canonical_config_hash(config: Mapping[str, Any]) -> str:
 def validate_config(config: Mapping[str, Any]) -> None:
     required = (
         "schema_version", "expected_strategy_version", "expected_preset_sha256",
-        "expected_symbol", "expected_timeframe", "source_revision_pattern",
+        "expected_symbol", "expected_timeframe", "expected_test_from",
+        "expected_test_to", "expected_initial_deposit", "expected_currency",
+        "expected_leverage", "source_revision_pattern",
         "financial_tolerance", "price_tolerance", "required_barrier_horizons",
         "binary_barrier_outcomes", "accepted_business_outcomes",
         "unverified_data_integrity_flags", "duplicate_policy",
@@ -192,6 +194,17 @@ def validate_config(config: Mapping[str, Any]) -> None:
         raise AuditFailure(f"Invalid source_revision_pattern: {exc}") from exc
     if float(config["financial_tolerance"]) < 0 or float(config["price_tolerance"]) < 0:
         raise AuditFailure("Financial and price tolerance cannot be negative")
+    expected_from = parse_time(str(config["expected_test_from"]) + " 00:00:00")
+    expected_to = parse_time(str(config["expected_test_to"]) + " 00:00:00")
+    if expected_from is None or expected_to is None or expected_from >= expected_to:
+        raise AuditFailure("expected_test_from/expected_test_to is invalid")
+    expected_deposit = parse_float(str(config["expected_initial_deposit"]))
+    if expected_deposit is None or expected_deposit <= 0:
+        raise AuditFailure("expected_initial_deposit must be positive")
+    if not str(config["expected_currency"]).strip():
+        raise AuditFailure("expected_currency is required")
+    if not str(config["expected_leverage"]).strip():
+        raise AuditFailure("expected_leverage is required")
     if set(int(value) for value in config["required_barrier_horizons"]) != {40, 50}:
         raise AuditFailure("required_barrier_horizons must contain exactly 40 and 50")
     if config["duplicate_policy"] != "keep_first_identical":
@@ -410,11 +423,50 @@ def validate_collection_context(audit: RunAudit, config: Mapping[str, Any]) -> N
     date_to = parse_time(str(tester.get("to", "")) + " 00:00:00")
     if date_from is None or date_to is None or date_from >= date_to:
         add_issue(audit, "ERROR", "INVALID_TEST_WINDOW", "Tester from/to is invalid")
+    else:
+        expected_from = parse_time(str(config["expected_test_from"]) + " 00:00:00")
+        expected_to = parse_time(str(config["expected_test_to"]) + " 00:00:00")
+        if date_from != expected_from or date_to != expected_to:
+            add_issue(
+                audit,
+                "ERROR",
+                "TEST_WINDOW_MISMATCH",
+                f"Expected {config['expected_test_from']} to {config['expected_test_to']}, "
+                f"found {tester.get('from')} to {tester.get('to')}",
+            )
     for field_name in ("initial_deposit", "final_balance"):
         if parse_float(str(tester.get(field_name, ""))) is None:
             add_issue(audit, "ERROR", "INVALID_TESTER_FINANCIAL", f"{field_name} is invalid")
+    initial_deposit = parse_float(str(tester.get("initial_deposit", "")))
+    expected_deposit = parse_float(str(config["expected_initial_deposit"]))
+    if (
+        initial_deposit is not None
+        and expected_deposit is not None
+        and abs(initial_deposit - expected_deposit) > float(config["financial_tolerance"])
+    ):
+        add_issue(
+            audit,
+            "ERROR",
+            "INITIAL_DEPOSIT_MISMATCH",
+            f"Expected {expected_deposit:.2f}, found {initial_deposit:.2f}",
+        )
     if not tester.get("currency") or not tester.get("leverage"):
         add_issue(audit, "ERROR", "TESTER_METADATA_MISSING", "Currency and leverage are required")
+    else:
+        if str(tester.get("currency")) != str(config["expected_currency"]):
+            add_issue(
+                audit,
+                "ERROR",
+                "TESTER_CURRENCY_MISMATCH",
+                f"Expected {config['expected_currency']!r}, found {tester.get('currency')!r}",
+            )
+        if str(tester.get("leverage")) != str(config["expected_leverage"]):
+            add_issue(
+                audit,
+                "ERROR",
+                "TESTER_LEVERAGE_MISMATCH",
+                f"Expected {config['expected_leverage']!r}, found {tester.get('leverage')!r}",
+            )
 
     artifacts = context.get("artifacts")
     if not isinstance(artifacts, dict):

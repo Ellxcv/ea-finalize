@@ -229,6 +229,8 @@ class DatasetAuditTests(unittest.TestCase):
         self.config = json.loads(config_path.read_text(encoding="utf-8"))
         self.config["expected_preset_sha256"] = "A" * 64
         self.config["expected_dependency_sha256"] = {}
+        self.config["expected_test_from"] = "2026.01.01"
+        self.config["expected_test_to"] = "2026.02.01"
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -264,6 +266,23 @@ class DatasetAuditTests(unittest.TestCase):
         self.assertEqual(report["totals"]["retained_candidates"], 0)
         issues = (self.root / "processed" / "audit_issues.csv").read_text()
         self.assertIn("RUN_BALANCE_RECONCILIATION_FAILED", issues)
+
+    def test_initial_deposit_mismatch_rejects_whole_run(self) -> None:
+        raw_root = self.root / "raw"
+        raw_root.mkdir()
+        run_dir = create_run(raw_root, "run-a")
+        context_path = run_dir / "collection_context.json"
+        context = json.loads(context_path.read_text(encoding="utf-8"))
+        context["tester"]["initial_deposit"] = 3000.0
+        context["tester"]["final_balance"] = 3005.0
+        context_path.write_text(json.dumps(context), encoding="utf-8")
+
+        report = self.run_audit(raw_root)
+
+        self.assertGreater(report["totals"]["errors"], 0)
+        self.assertEqual(report["totals"]["retained_candidates"], 0)
+        issues = (self.root / "processed" / "audit_issues.csv").read_text()
+        self.assertIn("INITIAL_DEPOSIT_MISMATCH", issues)
 
     def test_identical_cross_run_duplicate_keeps_first(self) -> None:
         raw_root = self.root / "raw"

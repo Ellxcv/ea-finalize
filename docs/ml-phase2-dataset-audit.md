@@ -2,9 +2,10 @@
 
 ## Status
 
-Tooling audit dan merge sudah diimplementasikan. Historical dataset retained belum dikumpulkan;
-pekerjaan itu memerlukan Strategy Tester real-tick yang dijalankan dengan source commit dan
-artefak yang benar.
+Tooling audit dan merge sudah diimplementasikan. Run diagnostik pertama (`r01`, folder 34) sudah
+dikumpulkan, tetapi ditolak sebagai retained dataset karena memakai deposit USD 3.000, bukan
+USD 4.000 sesuai kontrak. Historical dataset retained masih menunggu pengulangan `r02` dengan
+source commit dan seluruh artefak yang benar.
 
 Fase 2 tidak melatih model. Outputnya adalah dataset candidate yang sudah lolos gate provenance,
 schema, pairing, label, financial, duplicate, serta analisis rule deskriptif.
@@ -133,6 +134,7 @@ Run ditolak seluruhnya bila menemukan error:
 - source revision bukan Git commit;
 - strategy, preset, symbol, timeframe, atau barrier contract mismatch;
 - context, artifact hash, dependency hash, atau tester metadata hilang;
+- window test, initial deposit, currency, atau leverage berbeda dari audit config;
 - bukan real-tick model;
 - duplicate key dalam run;
 - orphan/missing pairing candidate-entry-trade-cycle-barrier;
