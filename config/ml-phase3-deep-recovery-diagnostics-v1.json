@@ -1,0 +1,42 @@
+{
+  "config_version": "ts7_ml_phase3b_deep_recovery_diagnostics_v1",
+  "dataset_schema": "ts7_entry_candidate_v3",
+  "minimum_rows": 1000,
+  "minimum_l4_rows": 100,
+  "l1_l3_outcome": "RECOVERY_L1_L3",
+  "l4_outcome": "RECOVERY_L4_PLUS",
+  "pairings": [
+    "logistic_pair",
+    "forest_pair",
+    "xgboost_pair"
+  ],
+  "prediction_artifacts": {
+    "core": "phase3-folder32-cci3-entry-v3-core-exp001",
+    "volatility": "phase3-folder32-cci3-entry-v3-volatility-exp001",
+    "durability": "phase3-folder32-cci3-entry-v3-durability-exp001",
+    "momentum": "phase3-folder32-cci3-entry-v3-momentum-exp001",
+    "structure": "phase3-folder32-cci3-entry-v3-structure-exp001"
+  },
+  "feature_configs": [
+    "ml-phase3-zero-l4-feature-v3-core.json",
+    "ml-phase3-zero-l4-feature-v3-volatility.json",
+    "ml-phase3-zero-l4-feature-v3-durability.json",
+    "ml-phase3-zero-l4-feature-v3-momentum.json",
+    "ml-phase3-zero-l4-feature-v3-structure.json"
+  ],
+  "subgroup_fields": [
+    "Direction",
+    "CciSignalType",
+    "Barrier50Outcome",
+    "AsiaSession",
+    "LondonSession",
+    "NewYorkSession",
+    "FeatureReadyV3",
+    "TrappedBetweenLevels"
+  ],
+  "minimum_subgroup_rows": 15,
+  "minimum_run_auc_separation": 0.03,
+  "stable_pair_auc_min": 0.60,
+  "persistent_allowed_fraction_min": 0.80,
+  "early_path_persistent_escape_rate": 0.50
+}

@@ -579,5 +579,13 @@ development-only; langkah berikutnya adalah feature schema v3 pada periode berku
 Feature schema v3 sekarang sudah diimplementasikan sebagai observation-only telemetry. Ia
 menambahkan 30 feature volatility regime, trend durability, pre-entry momentum, dan confirmed
 dynamic structure. Lima config staged memastikan setiap family diuji sendiri terhadap compact
-core sebelum digabungkan. Strategy Tester parity dan collection ulang pada dua periode development
-yang sama masih wajib sebelum training v3.
+core sebelum digabungkan. Strategy Tester parity dan collection ulang folder 47-48 telah selesai:
+1.080/1.080 candidate lolos audit, tetapi tidak ada family yang menghasilkan zero-L4 pada
+evaluation fold.
+
+Phase 3B kemudian menggabungkan 15 keputusan out-of-fold dari lima family dan tiga algoritma.
+Sebanyak 20 dari 62 L4+ evaluation tetap diizinkan oleh minimal 80% model. Dua belas feature lolos
+screen univariate yang lemah, tetapi tidak ada satu pun dari 1.596 additive rank pair yang mencapai
+AUC 0,60 pada kedua development run. Keputusan berikutnya adalah schema v4 early-path checkpoint
+sebelum original SL/recovery; runtime tetap `ML_OFF` dan final OOS tetap tersegel. Detail:
+[ml-phase3b-deep-recovery-failures.md](ml-phase3b-deep-recovery-failures.md).
