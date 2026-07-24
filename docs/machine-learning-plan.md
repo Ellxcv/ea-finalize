@@ -487,6 +487,12 @@ gate maksimal 10%; AUC, original win rate, dan recovery rate juga tidak membaik.
 ditolak. Development berikutnya perlu menambah informasi entry-state yang belum tersedia, bukan
 memilih threshold baru dari data yang sama.
 
+Schema `ts7_entry_candidate_v2` kemudian diimplementasikan sebagai observation-only extension.
+Ia menambah ADX/DI strength, CCI velocity, ATR expansion, serta distance dan line-slope
+HiLo/PSAR/SuperTrend M1–MTF. Audit tetap mendukung v1, sementara config training/diagnostic v2
+disiapkan terpisah. Source sudah compile `0 errors, 0 warnings`; short logger OFF/ON parity dan
+pengumpulan ulang development data v2 masih wajib sebelum training berikutnya.
+
 - siapkan pipeline reproducible;
 - chronological walk-forward dengan purge/embargo;
 - latih Logistic Regression dan tree challengers;

@@ -66,6 +66,38 @@ class BaselineModelTests(unittest.TestCase):
             baseline["feature_contract"]["forbidden"],
         )
 
+    def test_v2_project_config_adds_entry_state_features(self) -> None:
+        baseline = load_config()
+        config = TRAIN.read_config(
+            REPO_ROOT / "config" / "ml-phase3-baseline-v2.json"
+        )
+
+        TRAIN.validate_config(config)
+
+        self.assertEqual(config["dataset_schema"], "ts7_entry_candidate_v2")
+        self.assertEqual(len(config["feature_contract"]["numeric"]), 69)
+        self.assertEqual(
+            set(config["feature_contract"]["numeric"])
+            - set(baseline["feature_contract"]["numeric"]),
+            {
+                "AdxValue",
+                "AdxSlope1",
+                "DiGapDir",
+                "DiGapSlopeDir",
+                "CciSlope1Dir",
+                "CciSlope3Dir",
+                "ATRChange1",
+                "HiLoDistanceATR",
+                "HiLoLineSlopeATR",
+                "PsarDistanceATR",
+                "PsarLineSlopeATR",
+                "STDistanceATR",
+                "STLineSlopeATR",
+                "STMTFDistanceATR",
+                "STMTFLineSlopeATR",
+            },
+        )
+
     def test_config_inheritance_replaces_feature_lists(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)

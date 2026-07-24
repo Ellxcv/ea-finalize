@@ -2,6 +2,11 @@
 
 ## Status dan tujuan
 
+Schema v1 dibekukan untuk dataset historis folder 35/39/40. Logger aktif project sekarang
+menghasilkan `ts7_entry_candidate_v2`; audit tooling tetap mempertahankan dukungan v1 agar
+provenance eksperimen lama tidak berubah. Kontrak v2 tersedia di
+[ml-entry-candidate-v2-schema.md](ml-entry-candidate-v2-schema.md).
+
 Schema ini adalah output resmi logger observation-only Fase 1. Satu run menghasilkan snapshot
 candidate original entry, eksekusi order aktual, hasil original trade, hasil recovery cycle, dan
 label price-path 40/50 candle. Logger tidak memberi izin atau veto entry.

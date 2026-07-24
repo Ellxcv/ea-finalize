@@ -12,6 +12,10 @@ target awal penelitian 2.000–5.000 candidate. Final OOS tetap belum dibuka.
 Fase 2 tidak melatih model. Outputnya adalah dataset candidate yang sudah lolos gate provenance,
 schema, pairing, label, financial, duplicate, serta analisis rule deskriptif.
 
+Audit tooling mendukung `ts7_entry_candidate_v1` dan `ts7_entry_candidate_v2`, tetapi kedua schema
+tidak boleh digabung dalam satu output audit. V2 juga mewajibkan `FeatureReadyV2=true`, 15 feature
+entry-state baru tanpa `NA`, dan manifest `entry_state_strength_distance_v2`.
+
 ## Struktur data lokal
 
 Raw dan processed data wajib berada di luar repository:

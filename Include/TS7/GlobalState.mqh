@@ -30,6 +30,7 @@ struct SHandles
    int mlBarrierATR;
    int mlATR_M5;
    int mlEMA;
+   int mlADX;
 
    SHandles()
      {
@@ -56,6 +57,7 @@ struct SHandles
       mlBarrierATR = INVALID_HANDLE;
       mlATR_M5 = INVALID_HANDLE;
       mlEMA = INVALID_HANDLE;
+      mlADX = INVALID_HANDLE;
      }
   };
 

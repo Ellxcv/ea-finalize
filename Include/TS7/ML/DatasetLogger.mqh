@@ -5,7 +5,7 @@
 #ifndef TS7_ML_DATASET_LOGGER_MQH
 #define TS7_ML_DATASET_LOGGER_MQH
 
-const string TS7_ML_SCHEMA_VERSION = "ts7_entry_candidate_v1";
+const string TS7_ML_SCHEMA_VERSION = "ts7_entry_candidate_v2";
 const int    TS7_ML_BARRIER_ATR_PERIOD = 14;
 const int    TS7_ML_PRIMARY_HORIZON = 50;
 const int    TS7_ML_SENSITIVITY_HORIZON = 40;
@@ -197,7 +197,7 @@ bool MlValidateLoggerInputs()
       return true;
    if(_Period != PERIOD_M1)
      {
-      Print("ERROR: [ML_DATASET] Logger schema v1 requires chart timeframe M1.");
+      Print("ERROR: [ML_DATASET] Logger schema v2 requires chart timeframe M1.");
       return false;
      }
    if(StringLen(InpMlStrategyVersion) == 0)
@@ -311,7 +311,11 @@ string MlCandidateHeader()
       "Minute,DayOfWeek,TimeOfDaySin,TimeOfDayCos,DayOfWeekSin,"
       "DayOfWeekCos,AsiaSession,LondonSession,NewYorkSession,"
       "SessionDistanceReady,MinutesFromSessionOpen,MinutesToSessionClose,"
-      "StructureReady,DirectionalRoomATR,DataIntegrityFlag";
+      "StructureReady,DirectionalRoomATR,FeatureReadyV2,AdxValue,"
+      "AdxSlope1,DiGapDir,DiGapSlopeDir,CciSlope1Dir,CciSlope3Dir,"
+      "ATRChange1,HiLoDistanceATR,HiLoLineSlopeATR,PsarDistanceATR,"
+      "PsarLineSlopeATR,STDistanceATR,STLineSlopeATR,STMTFDistanceATR,"
+      "STMTFLineSlopeATR,DataIntegrityFlag";
   }
 
 //+------------------------------------------------------------------+
@@ -379,6 +383,17 @@ bool MlInitializeDatasetLogger()
       "  \"barrier_atr\": \"RMA_14_M1_CLOSED\",\r\n"
       "  \"primary_horizon_bars\": 50,\r\n"
       "  \"sensitivity_horizon_bars\": 40,\r\n"
+      "  \"feature_contract\": \"entry_state_strength_distance_v2\",\r\n"
+      "  \"feature_snapshot\": \"CLOSED_BARS_ONLY_AT_CANDIDATE\",\r\n"
+      "  \"adx_timeframe\": \"" +
+         MlJsonEscape(EnumToString((InpAdxTimeframe == PERIOD_CURRENT)
+                                    ? (ENUM_TIMEFRAMES)_Period
+                                    : InpAdxTimeframe)) + "\",\r\n"
+      "  \"adx_dmi_period\": " + IntegerToString(InpAdxDmiPeriod) + ",\r\n"
+      "  \"adx_smoothing_enabled\": " +
+         MlBoolText(InpAdxEnableSmoothing) + ",\r\n"
+      "  \"adx_smoothing_period\": " +
+         IntegerToString(InpAdxSmoothing) + ",\r\n"
       "  \"data_integrity_flag\": \"" + MlJsonEscape(InpMlDataIntegrityFlag) + "\",\r\n"
       "  \"build_time\": \"" + MlJsonEscape(MlTimeText(__DATETIME__)) + "\",\r\n"
       "  \"tester\": " + MlBoolText((bool)MQLInfoInteger(MQL_TESTER)) + ",\r\n"
@@ -423,6 +438,134 @@ bool MlReadIndicatorValue(const int handle,
 bool MlReadAtr(const int handle, double &atrPrice)
   {
    return MlReadIndicatorValue(handle, 0, 1, atrPrice) && atrPrice > 0.0;
+  }
+
+//+------------------------------------------------------------------+
+bool MlReadAdxSnapshot(const int direction,
+                       double &adxValue,
+                       double &adxSlope1,
+                       double &diGapDir,
+                       double &diGapSlopeDir)
+  {
+   adxValue = 0.0;
+   adxSlope1 = 0.0;
+   diGapDir = 0.0;
+   diGapSlopeDir = 0.0;
+   if(g_handles.mlADX == INVALID_HANDLE || (direction != 1 && direction != -1))
+      return false;
+
+   int smoothCount = (InpAdxEnableSmoothing
+                      ? MathMax(1, InpAdxSmoothing) : 1);
+   int requiredAdx = smoothCount + 1;
+   double adxValues[];
+   double plusDiValues[];
+   double minusDiValues[];
+   ArrayResize(adxValues, requiredAdx);
+   ArrayResize(plusDiValues, 2);
+   ArrayResize(minusDiValues, 2);
+   ArraySetAsSeries(adxValues, true);
+   ArraySetAsSeries(plusDiValues, true);
+   ArraySetAsSeries(minusDiValues, true);
+
+   if(CopyBuffer(g_handles.mlADX, 0, 1, requiredAdx, adxValues) != requiredAdx ||
+      CopyBuffer(g_handles.mlADX, 1, 1, 2, plusDiValues) != 2 ||
+      CopyBuffer(g_handles.mlADX, 2, 1, 2, minusDiValues) != 2)
+      return false;
+
+   double previousAdx = 0.0;
+   for(int i = 0; i < smoothCount; i++)
+     {
+      if(!MathIsValidNumber(adxValues[i]) ||
+         !MathIsValidNumber(adxValues[i + 1]) ||
+         adxValues[i] == EMPTY_VALUE ||
+         adxValues[i + 1] == EMPTY_VALUE)
+         return false;
+      adxValue += adxValues[i];
+      previousAdx += adxValues[i + 1];
+     }
+   adxValue /= smoothCount;
+   previousAdx /= smoothCount;
+   adxSlope1 = adxValue - previousAdx;
+
+   for(int i = 0; i < 2; i++)
+      if(!MathIsValidNumber(plusDiValues[i]) ||
+         !MathIsValidNumber(minusDiValues[i]) ||
+         plusDiValues[i] == EMPTY_VALUE ||
+         minusDiValues[i] == EMPTY_VALUE)
+         return false;
+
+   double currentGap = plusDiValues[0] - minusDiValues[0];
+   double previousGap = plusDiValues[1] - minusDiValues[1];
+   diGapDir = direction * currentGap;
+   diGapSlopeDir = direction * (currentGap - previousGap);
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+bool MlReadDirectionalLineSnapshot(const int handle,
+                                   const int lineBuffer,
+                                   const int currentShift,
+                                   const int direction,
+                                   const double referencePrice,
+                                   const double atrPrice,
+                                   double &distanceAtr,
+                                   double &lineSlopeAtr)
+  {
+   distanceAtr = 0.0;
+   lineSlopeAtr = 0.0;
+   if(currentShift < 1 || atrPrice <= 0.0)
+      return false;
+
+   double lineCurrent = 0.0;
+   double linePrevious = 0.0;
+   if(!MlReadIndicatorValue(handle, lineBuffer, currentShift, lineCurrent) ||
+      !MlReadIndicatorValue(handle, lineBuffer, currentShift + 1, linePrevious))
+      return false;
+
+   distanceAtr = direction * (referencePrice - lineCurrent) / atrPrice;
+   lineSlopeAtr = direction * (lineCurrent - linePrevious) / atrPrice;
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+bool MlReadTrendLineAtShift(const int handle,
+                            const int shift,
+                            double &lineValue)
+  {
+   lineValue = 0.0;
+   int state = 0;
+   if(!MlReadBufferStateAtShift(handle, 4, shift, state))
+      return false;
+   int lineBuffer = (state > 0 ? 0 : 1);
+   return MlReadIndicatorValue(handle, lineBuffer, shift, lineValue);
+  }
+
+//+------------------------------------------------------------------+
+bool MlReadTrendLineSnapshot(const int handle,
+                             const ENUM_TIMEFRAMES timeframe,
+                             const datetime observationTime,
+                             const int direction,
+                             const double referencePrice,
+                             const double atrPrice,
+                             double &distanceAtr,
+                             double &lineSlopeAtr)
+  {
+   distanceAtr = 0.0;
+   lineSlopeAtr = 0.0;
+   int shift =
+      FindOriginalDiagnosticLastClosedShift(timeframe, observationTime);
+   if(shift < 1 || atrPrice <= 0.0)
+      return false;
+
+   double lineCurrent = 0.0;
+   double linePrevious = 0.0;
+   if(!MlReadTrendLineAtShift(handle, shift, lineCurrent) ||
+      !MlReadTrendLineAtShift(handle, shift + 1, linePrevious))
+      return false;
+
+   distanceAtr = direction * (referencePrice - lineCurrent) / atrPrice;
+   lineSlopeAtr = direction * (lineCurrent - linePrevious) / atrPrice;
+   return true;
   }
 
 //+------------------------------------------------------------------+
@@ -640,11 +783,15 @@ string MlRegisterEntryCandidate(const int direction,
       signalTime + PeriodSeconds(PERIOD_M1);
 
    double atrM1 = 0.0;
+   double atrM1Previous = 0.0;
    double atrM5 = 0.0;
    double ema1 = 0.0;
    double ema6 = 0.0;
    double ema11 = 0.0;
    bool atrM1Ready = MlReadAtr(g_handles.mlBarrierATR, atrM1);
+   bool atrM1PreviousReady =
+      MlReadIndicatorValue(g_handles.mlBarrierATR, 0, 2, atrM1Previous) &&
+      atrM1Previous > 0.0;
    bool atrM5Ready = MlReadAtr(g_handles.mlATR_M5, atrM5);
    bool emaReady =
       MlReadIndicatorValue(g_handles.mlEMA, 0, 1, ema1) &&
@@ -655,9 +802,14 @@ string MlRegisterEntryCandidate(const int direction,
    double ciSignal = 0.0;
    double cciCandidate = 0.0;
    double ciCandidate = 0.0;
+   double cciPrevious1 = 0.0;
+   double cciPrevious3 = 0.0;
    bool cciReady =
       ReadOriginalDiagnosticCciPairAtShift(signalAge, cciSignal, ciSignal) &&
       ReadOriginalDiagnosticCciPairAtShift(1, cciCandidate, ciCandidate);
+   bool cciVelocityReady =
+      MlReadIndicatorValue(g_handles.cci, 0, 2, cciPrevious1) &&
+      MlReadIndicatorValue(g_handles.cci, 0, 4, cciPrevious3);
 
    int mainPsarHandle = (g_handles.mainPSAR != INVALID_HANDLE
                          ? g_handles.mainPSAR : g_handles.psar);
@@ -669,6 +821,48 @@ string MlRegisterEntryCandidate(const int direction,
    ENUM_TIMEFRAMES mainStTf = (g_handles.mainSuperTrend != INVALID_HANDLE
                                 ? InpMainSuperTrendTimeframe
                                 : (ENUM_TIMEFRAMES)_Period);
+
+   double adxValue = 0.0;
+   double adxSlope1 = 0.0;
+   double diGapDir = 0.0;
+   double diGapSlopeDir = 0.0;
+   bool adxSnapshotReady =
+      MlReadAdxSnapshot(direction, adxValue, adxSlope1,
+                        diGapDir, diGapSlopeDir);
+
+   double hiloDistanceAtr = 0.0;
+   double hiloLineSlopeAtr = 0.0;
+   int hiloLineBuffer = (direction > 0 ? 7 : 6);
+   bool hiloSnapshotReady =
+      MlReadDirectionalLineSnapshot(g_handles.hilo, hiloLineBuffer, 1,
+                                    direction, referencePrice, atrM1,
+                                    hiloDistanceAtr, hiloLineSlopeAtr);
+
+   double psarDistanceAtr = 0.0;
+   double psarLineSlopeAtr = 0.0;
+   int psarCandidateShift =
+      FindOriginalDiagnosticLastClosedShift(mainPsarTf, candidateTime);
+   bool psarSnapshotReady =
+      MlReadDirectionalLineSnapshot(mainPsarHandle, 0, psarCandidateShift,
+                                    direction, referencePrice, atrM1,
+                                    psarDistanceAtr, psarLineSlopeAtr);
+
+   double stDistanceAtr = 0.0;
+   double stLineSlopeAtr = 0.0;
+   bool stSnapshotReady =
+      MlReadTrendLineSnapshot(mainStHandle, mainStTf, candidateTime,
+                              direction, referencePrice, atrM1,
+                              stDistanceAtr, stLineSlopeAtr);
+
+   double stMtfDistanceAtr = 0.0;
+   double stMtfLineSlopeAtr = 0.0;
+   bool stMtfSnapshotReady = true;
+   if(InpEnableSTMTF && InpSTFilterTF != PERIOD_CURRENT)
+      stMtfSnapshotReady =
+         MlReadTrendLineSnapshot(g_handles.stFilter, InpSTFilterTF,
+                                 candidateTime, direction, referencePrice,
+                                 atrM1, stMtfDistanceAtr,
+                                 stMtfLineSlopeAtr);
 
    int hiloSignalAlign = 0;
    int psarSignalAlign = 0;
@@ -926,6 +1120,16 @@ string MlRegisterEntryCandidate(const int direction,
       atrM1Ready && atrM5Ready && emaReady && cciReady &&
       confirmationReady && latencyReady && ratesReady &&
       preEntryReady && recentRangeReady;
+   double cciSlope1Dir =
+      direction * (cciCandidate - cciPrevious1);
+   double cciSlope3Dir =
+      direction * (cciCandidate - cciPrevious3) / 3.0;
+   double atrChange1 =
+      (atrM1PreviousReady ? atrM1 / atrM1Previous - 1.0 : 0.0);
+   bool featureReadyV2 =
+      featureReady && atrM1PreviousReady && cciVelocityReady &&
+      adxSnapshotReady && hiloSnapshotReady && psarSnapshotReady &&
+      stSnapshotReady && stMtfSnapshotReady;
 
    string row =
       TS7_ML_SCHEMA_VERSION + "," +
@@ -1007,6 +1211,22 @@ string MlRegisterEntryCandidate(const int direction,
       (sessionDistanceReady ? IntegerToString(minutesToSessionClose) : "NA") + "," +
       MlBoolText(structureReady) + "," +
       MlDoubleText(directionalRoomAtr, 6, directionalRoomReady) + "," +
+      MlBoolText(featureReadyV2) + "," +
+      MlDoubleText(adxValue, 6, adxSnapshotReady) + "," +
+      MlDoubleText(adxSlope1, 6, adxSnapshotReady) + "," +
+      MlDoubleText(diGapDir, 6, adxSnapshotReady) + "," +
+      MlDoubleText(diGapSlopeDir, 6, adxSnapshotReady) + "," +
+      MlDoubleText(cciSlope1Dir, 6, cciVelocityReady) + "," +
+      MlDoubleText(cciSlope3Dir, 6, cciVelocityReady) + "," +
+      MlDoubleText(atrChange1, 8, atrM1PreviousReady) + "," +
+      MlDoubleText(hiloDistanceAtr, 6, hiloSnapshotReady) + "," +
+      MlDoubleText(hiloLineSlopeAtr, 6, hiloSnapshotReady) + "," +
+      MlDoubleText(psarDistanceAtr, 6, psarSnapshotReady) + "," +
+      MlDoubleText(psarLineSlopeAtr, 6, psarSnapshotReady) + "," +
+      MlDoubleText(stDistanceAtr, 6, stSnapshotReady) + "," +
+      MlDoubleText(stLineSlopeAtr, 6, stSnapshotReady) + "," +
+      MlDoubleText(stMtfDistanceAtr, 6, stMtfSnapshotReady) + "," +
+      MlDoubleText(stMtfLineSlopeAtr, 6, stMtfSnapshotReady) + "," +
       MlCsvEscape(InpMlDataIntegrityFlag);
 
    MlWriteRow(g_mlCandidateFile, row);

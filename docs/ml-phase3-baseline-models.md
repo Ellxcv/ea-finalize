@@ -142,6 +142,10 @@ Forest naik menjadi 12,90%, tetapi winner rejection memburuk menjadi 11,14%, mel
 dan metrik klasifikasi/recovery ikut memburuk. Compact contract tidak dipromosikan. Detailnya ada
 di [ml-phase3-compact-features.md](ml-phase3-compact-features.md).
 
+Schema v2 entry-state sudah diimplementasikan untuk menguji informasi ADX/DI, CCI velocity,
+volatility expansion, serta indicator distance/slope yang belum tersedia di v1. Training v2 belum
+dimulai; short logger parity dan development data v2 yang diaudit harus tersedia lebih dahulu.
+
 ## Interpretasi dan langkah berikutnya
 
 Hasil lemah belum membuktikan ML tidak berguna. Dataset 982 candidate berada pada batas eksplorasi

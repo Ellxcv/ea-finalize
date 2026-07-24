@@ -18,7 +18,11 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 
-SCHEMA_VERSION = "ts7_entry_candidate_v1"
+SCHEMA_VERSION_V1 = "ts7_entry_candidate_v1"
+SCHEMA_VERSION_V2 = "ts7_entry_candidate_v2"
+SUPPORTED_SCHEMA_VERSIONS = {SCHEMA_VERSION_V1, SCHEMA_VERSION_V2}
+# Backward-compatible aliases used by the v1 fixture tests and retained configs.
+SCHEMA_VERSION = SCHEMA_VERSION_V1
 CSV_FILES = (
     "candidate_setups.csv",
     "trade_entries.csv",
@@ -27,7 +31,7 @@ CSV_FILES = (
     "barrier_outcomes.csv",
 )
 
-CANDIDATE_HEADER = (
+CANDIDATE_HEADER_V1 = (
     "SchemaVersion", "RunId", "SetupId", "StrategyVersion", "SourceRevision",
     "PresetHash", "Symbol", "Timeframe", "CandidateTime", "CandidateBarTime",
     "SignalTime", "Direction", "CciSignalType", "SignalAgeBars",
@@ -49,6 +53,20 @@ CANDIDATE_HEADER = (
     "MinutesToSessionClose", "StructureReady", "DirectionalRoomATR",
     "DataIntegrityFlag",
 )
+CANDIDATE_V2_FEATURES = (
+    "AdxValue", "AdxSlope1", "DiGapDir", "DiGapSlopeDir",
+    "CciSlope1Dir", "CciSlope3Dir", "ATRChange1", "HiLoDistanceATR",
+    "HiLoLineSlopeATR", "PsarDistanceATR", "PsarLineSlopeATR",
+    "STDistanceATR", "STLineSlopeATR", "STMTFDistanceATR",
+    "STMTFLineSlopeATR",
+)
+CANDIDATE_HEADER_V2 = (
+    CANDIDATE_HEADER_V1[:-1]
+    + ("FeatureReadyV2",)
+    + CANDIDATE_V2_FEATURES
+    + ("DataIntegrityFlag",)
+)
+CANDIDATE_HEADER = CANDIDATE_HEADER_V1
 
 TRADE_ENTRY_HEADER = (
     "SchemaVersion", "RunId", "SetupId", "AttemptNumber", "CycleId",
@@ -78,8 +96,7 @@ BARRIER_OUTCOME_HEADER = (
     "FavorablePrice", "AdversePrice", "ElapsedBars",
 )
 
-EXPECTED_HEADERS = {
-    "candidate_setups.csv": CANDIDATE_HEADER,
+EXPECTED_NON_CANDIDATE_HEADERS = {
     "trade_entries.csv": TRADE_ENTRY_HEADER,
     "trade_outcomes.csv": TRADE_OUTCOME_HEADER,
     "cycle_outcomes.csv": CYCLE_OUTCOME_HEADER,
@@ -103,6 +120,7 @@ BASE_REQUIRED_FEATURES = (
     "TimeOfDaySin", "TimeOfDayCos", "DayOfWeekSin", "DayOfWeekCos",
     "AsiaSession", "LondonSession", "NewYorkSession",
 )
+BASE_REQUIRED_FEATURES_V2 = BASE_REQUIRED_FEATURES + CANDIDATE_V2_FEATURES
 
 MERGED_LABEL_HEADER = (
     "Barrier40Outcome", "Barrier40ElapsedBars", "Barrier50Outcome",
@@ -167,6 +185,30 @@ def canonical_config_hash(config: Mapping[str, Any]) -> str:
     return sha256_bytes(payload)
 
 
+def candidate_header_for_schema(schema_version: str) -> tuple[str, ...]:
+    if schema_version == SCHEMA_VERSION_V1:
+        return CANDIDATE_HEADER_V1
+    if schema_version == SCHEMA_VERSION_V2:
+        return CANDIDATE_HEADER_V2
+    raise AuditFailure(f"Unsupported schema_version: {schema_version!r}")
+
+
+def expected_header_for_file(
+    schema_version: str, file_name: str
+) -> tuple[str, ...]:
+    if file_name == "candidate_setups.csv":
+        return candidate_header_for_schema(schema_version)
+    return EXPECTED_NON_CANDIDATE_HEADERS[file_name]
+
+
+def required_features_for_schema(schema_version: str) -> tuple[str, ...]:
+    if schema_version == SCHEMA_VERSION_V1:
+        return BASE_REQUIRED_FEATURES
+    if schema_version == SCHEMA_VERSION_V2:
+        return BASE_REQUIRED_FEATURES_V2
+    raise AuditFailure(f"Unsupported schema_version: {schema_version!r}")
+
+
 def validate_config(config: Mapping[str, Any]) -> None:
     required = (
         "schema_version", "expected_strategy_version", "expected_preset_sha256",
@@ -181,7 +223,7 @@ def validate_config(config: Mapping[str, Any]) -> None:
     missing = [key for key in required if key not in config]
     if missing:
         raise AuditFailure(f"Audit config is missing fields: {', '.join(missing)}")
-    if config["schema_version"] != SCHEMA_VERSION:
+    if config["schema_version"] not in SUPPORTED_SCHEMA_VERSIONS:
         raise AuditFailure(
             f"Unsupported schema_version: {config['schema_version']!r}"
         )
@@ -221,7 +263,7 @@ def validate_config(config: Mapping[str, Any]) -> None:
     unknown_features = (
         set(config["numeric_rule_features"])
         | set(config["categorical_rule_features"])
-    ) - set(CANDIDATE_HEADER)
+    ) - set(candidate_header_for_schema(str(config["schema_version"])))
     if unknown_features:
         raise AuditFailure(
             "Unknown rule-analysis features: " + ", ".join(sorted(unknown_features))
@@ -343,7 +385,12 @@ def read_csv_exact(audit: RunAudit, file_name: str) -> list[dict[str, str]]:
         with path.open("r", encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             actual = tuple(reader.fieldnames or ())
-            expected = EXPECTED_HEADERS[file_name]
+            schema_version = str(audit.manifest.get("schema_version", ""))
+            try:
+                expected = expected_header_for_file(schema_version, file_name)
+            except AuditFailure as exc:
+                add_issue(audit, "ERROR", "UNSUPPORTED_SCHEMA", str(exc))
+                return []
             if actual != expected:
                 add_issue(
                     audit,
@@ -378,6 +425,12 @@ def validate_manifest(audit: RunAudit, config: Mapping[str, Any]) -> None:
         "primary_horizon_bars", "sensitivity_horizon_bars",
         "data_integrity_flag", "build_time", "tester", "optimization",
     )
+    if config["schema_version"] == SCHEMA_VERSION_V2:
+        required += (
+            "feature_contract", "feature_snapshot", "adx_timeframe",
+            "adx_dmi_period", "adx_smoothing_enabled",
+            "adx_smoothing_period",
+        )
     for key in required:
         if key not in manifest:
             add_issue(audit, "ERROR", "MANIFEST_FIELD_MISSING", f"Missing manifest field: {key}")
@@ -423,6 +476,27 @@ def validate_manifest(audit: RunAudit, config: Mapping[str, Any]) -> None:
         add_issue(audit, "ERROR", "BARRIER_CONTRACT_MISMATCH", "Sensitivity horizon must be 40")
     if manifest.get("optimization") is True:
         add_issue(audit, "ERROR", "OPTIMIZATION_RUN_REJECTED", "Optimization runs are not retained")
+    if config["schema_version"] == SCHEMA_VERSION_V2:
+        if manifest.get("feature_contract") != "entry_state_strength_distance_v2":
+            add_issue(
+                audit, "ERROR", "FEATURE_CONTRACT_MISMATCH",
+                "Unexpected v2 feature contract",
+            )
+        if manifest.get("feature_snapshot") != "CLOSED_BARS_ONLY_AT_CANDIDATE":
+            add_issue(
+                audit, "ERROR", "FEATURE_SNAPSHOT_MISMATCH",
+                "V2 feature snapshot must use candidate-time closed bars only",
+            )
+        if (parse_int(str(manifest.get("adx_dmi_period", ""))) or 0) <= 0:
+            add_issue(
+                audit, "ERROR", "ADX_CONTRACT_INVALID",
+                "adx_dmi_period must be positive",
+            )
+        if (parse_int(str(manifest.get("adx_smoothing_period", ""))) or 0) <= 0:
+            add_issue(
+                audit, "ERROR", "ADX_CONTRACT_INVALID",
+                "adx_smoothing_period must be positive",
+            )
 
     integrity_flag = str(manifest.get("data_integrity_flag", ""))
     if integrity_flag in set(config["unverified_data_integrity_flags"]):
@@ -649,6 +723,11 @@ def validate_candidates(
     rows = audit.rows["candidate_setups.csv"]
     index = unique_index(audit, rows, "candidate", ("SetupId",))
     candidates = {key[0]: row for key, row in index.items()}
+    schema_version = str(audit.manifest.get("schema_version", ""))
+    required_features = required_features_for_schema(schema_version)
+    ready_fields = ["FeatureReady"]
+    if schema_version == SCHEMA_VERSION_V2:
+        ready_fields.append("FeatureReadyV2")
     for setup_id, row in candidates.items():
         for field_name in ("CandidateTime", "CandidateBarTime", "SignalTime"):
             if parse_time(row[field_name]) is None:
@@ -657,12 +736,13 @@ def validate_candidates(
                     f"{field_name} is invalid: {row[field_name]!r}", setup_id,
                 )
                 audit.excluded[setup_id].add("invalid_time")
-        if row["FeatureReady"] != "true":
+        if any(row[field] != "true" for field in ready_fields):
             audit.excluded[setup_id].add("feature_not_ready")
-        elif any(row[field] == "NA" for field in BASE_REQUIRED_FEATURES):
+        elif any(row[field] == "NA" for field in required_features):
             add_issue(
                 audit, "ERROR", "READY_FEATURE_MISSING",
-                "FeatureReady=true but a required feature is NA", setup_id,
+                "All readiness flags are true but a required feature is NA",
+                setup_id,
             )
             audit.excluded[setup_id].add("required_feature_missing")
         if parse_int(row["Direction"]) not in (-1, 1):
@@ -981,6 +1061,7 @@ def audit_run(path: Path, config: Mapping[str, Any]) -> RunAudit:
 
     critical_file_codes = {
         "MISSING_FILE", "HEADER_MISMATCH", "MALFORMED_ROW", "CSV_READ_ERROR",
+        "UNSUPPORTED_SCHEMA",
     }
     if any(issue.code in critical_file_codes for issue in audit.issues):
         for row in audit.rows.get("candidate_setups.csv", []):
@@ -1289,7 +1370,10 @@ def audit_dataset(
     merged.sort(key=lambda row: (row["CandidateTime"], row["RunId"], row["SetupId"]))
 
     analysis_rows = rule_analysis(merged, config)
-    merged_header = CANDIDATE_HEADER + MERGED_LABEL_HEADER
+    merged_header = (
+        candidate_header_for_schema(str(config["schema_version"]))
+        + MERGED_LABEL_HEADER
+    )
     write_csv(output_dir / "merged_candidates.csv", merged_header, merged)
     write_csv(
         output_dir / "excluded_candidates.csv",
